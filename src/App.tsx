@@ -6,6 +6,7 @@ import {
   Controls,
   MiniMap,
   BackgroundVariant,
+  SelectionMode,
   useReactFlow,
 } from '@xyflow/react';
 import type { NodeTypes, Edge } from '@xyflow/react';
@@ -113,7 +114,7 @@ function FlowCanvas() {
         style={{ background: '#0a0f1e' }}
         selectionOnDrag
         panOnDrag={[1, 2]}
-        selectionMode="partial"
+        selectionMode={SelectionMode.Partial}
         onSelectionStart={handleSelectionStart}
         onSelectionEnd={handleSelectionEnd}
       >

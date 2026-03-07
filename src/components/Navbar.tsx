@@ -115,7 +115,7 @@ export function Navbar() {
               Bottlenecker
             </div>
             <div style={{ fontSize: 9, color: '#64748b', letterSpacing: '0.1em', textTransform: 'uppercase', lineHeight: 1 }}>
-              by Arkynate Labs
+              by Arkynate Labs · v{__APP_VERSION__}
             </div>
           </div>
         </div>
@@ -255,6 +255,36 @@ export function Navbar() {
         <NavBtn onClick={exportJSON}>Export</NavBtn>
         <NavBtn onClick={() => fileRef.current?.click()}>Import</NavBtn>
         <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+        <a
+          href="mailto:jabito.javier@gmail.com?subject=Bottlenecker%20Feedback"
+          style={{
+            background: 'transparent',
+            border: '1px solid transparent',
+            borderRadius: 6,
+            color: '#94a3b8',
+            padding: '5px 12px',
+            fontSize: 12,
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontWeight: 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            transition: 'all 0.15s',
+            whiteSpace: 'nowrap',
+            textDecoration: 'none',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = '#1a2235';
+            e.currentTarget.style.borderColor = '#1e2d45';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.borderColor = 'transparent';
+          }}
+        >
+          Contact
+        </a>
       </div>
 
       {/* Toast */}
