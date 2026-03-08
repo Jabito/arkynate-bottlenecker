@@ -335,7 +335,7 @@ export default function HomePage() {
           Bottlenecker · by{' '}
           <span style={{ color: '#94a3b8' }}>Arkynate Labs</span>
         </div>
-        <div style={{ display: 'flex', gap: 20 }}>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           {[
             { to: '/components', label: 'Components' },
             { to: '/playground', label: 'Playground' },
@@ -355,6 +355,21 @@ export default function HomePage() {
               {link.label}
             </Link>
           ))}
+          <a
+            href="https://www.paypal.com/paypalme/kingJabito"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: 13,
+              color: '#64748b',
+              textDecoration: 'none',
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; }}
+          >
+            ☕ Support
+          </a>
         </div>
       </footer>
     </div>

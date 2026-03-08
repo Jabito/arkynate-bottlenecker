@@ -116,6 +116,7 @@ function FlowCanvas() {
         selectionMode={SelectionMode.Partial}
         onSelectionStart={handleSelectionStart}
         onSelectionEnd={handleSelectionEnd}
+        proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--border)" />
         <Controls />

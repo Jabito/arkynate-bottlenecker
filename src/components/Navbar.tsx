@@ -52,7 +52,7 @@ const navLinkStyle = ({ isActive }: { isActive: boolean }) => ({
 export function Navbar() {
   const {
     diagramName, setDiagramName,
-    newDiagram, saveDiagram, loadDiagram, deleteDiagram, exportJSON, importJSON,
+    newDiagram, saveDiagram, loadDiagram, deleteDiagram, exportJSON, exportPNG, exportJPG, importJSON,
     loadTemplate,
     savedDiagrams,
   } = useDiagramStore();
@@ -63,6 +63,7 @@ export function Navbar() {
   const [showSaveMenu,      setShowSaveMenu]      = useState(false);
   const [showLoadMenu,      setShowLoadMenu]       = useState(false);
   const [showTemplateMenu,  setShowTemplateMenu]   = useState(false);
+  const [showExportMenu,    setShowExportMenu]     = useState(false);
   const [saveName,          setSaveName]           = useState('');
   const [toastMsg,          setToastMsg]           = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -108,6 +109,7 @@ export function Navbar() {
     setShowSaveMenu(false);
     setShowLoadMenu(false);
     setShowTemplateMenu(false);
+    setShowExportMenu(false);
   };
 
   return (
@@ -289,13 +291,100 @@ export function Navbar() {
               )}
             </div>
 
-            <NavBtn onClick={exportJSON}>Export</NavBtn>
-            <NavBtn onClick={() => fileRef.current?.click()}>Import</NavBtn>
+            {/* Export */}
+            <div style={{ position: 'relative' }}>
+              <NavBtn onClick={() => { setShowExportMenu(s => !s); setShowSaveMenu(false); setShowLoadMenu(false); setShowTemplateMenu(false); }}>
+                Export ▾
+              </NavBtn>
+              {showExportMenu && (
+                <div style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 4,
+                  background: '#111827', border: '1px solid #1e2d45', borderRadius: 8,
+                  padding: 8, width: 220, zIndex: 50,
+                }}>
+                  {[
+                    { label: 'Export JSON', action: () => { exportJSON(); setShowExportMenu(false); } },
+                    { label: 'Export PNG', action: () => { exportPNG(); setShowExportMenu(false); } },
+                    { label: 'Export JPG', action: () => { exportJPG(); setShowExportMenu(false); } },
+                  ].map(item => (
+                    <button
+                      key={item.label}
+                      onClick={item.action}
+                      style={{
+                        width: '100%', background: 'transparent', border: 'none', borderRadius: 6,
+                        color: '#e2e8f0', padding: '7px 10px', fontSize: 12, cursor: 'pointer',
+                        textAlign: 'left', transition: 'background 0.1s',
+                        fontFamily: "'Space Grotesk', sans-serif",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#1a2235'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                  <div style={{ borderTop: '1px solid #1e2d45', margin: '6px 0' }} />
+                  <div style={{ fontSize: 10, color: '#475569', padding: '4px 10px' }}>
+                    ℹ️ Only JSON exports can be re-imported.
+                  </div>
+                  <div style={{ borderTop: '1px solid #1e2d45', margin: '6px 0' }} />
+                  <a
+                    href="https://www.paypal.com/paypalme/kingJabito"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'block', padding: '7px 10px', fontSize: 11,
+                      color: '#64748b', textDecoration: 'none', borderRadius: 6,
+                      transition: 'color 0.15s, background 0.1s',
+                      fontFamily: "'Space Grotesk', sans-serif",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = '#1a2235'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    ☕ Enjoying Bottlenecker? Buy me a coffee →
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <NavBtn onClick={() => fileRef.current?.click()} title="Import JSON only">Import</NavBtn>
             <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
 
             <ThemePicker />
           </>
         )}
+
+        <a
+          href="https://www.paypal.com/paypalme/kingJabito"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            background: 'transparent',
+            border: '1px solid transparent',
+            borderRadius: 6,
+            color: '#94a3b8',
+            padding: '5px 12px',
+            fontSize: 12,
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontWeight: 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            transition: 'all 0.15s',
+            whiteSpace: 'nowrap',
+            textDecoration: 'none',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = '#1a2235';
+            e.currentTarget.style.borderColor = '#1e2d45';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.borderColor = 'transparent';
+          }}
+        >
+          ☕ Support
+        </a>
 
         <a
           href="mailto:jabito.javier@gmail.com?subject=Bottlenecker%20Issue"

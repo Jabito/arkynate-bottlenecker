@@ -4,10 +4,13 @@ import {
   addEdge,
   applyNodeChanges,
   applyEdgeChanges,
+  getNodesBounds,
+  getViewportForBounds,
 } from '@xyflow/react';
 import type {
   Node, Edge, NodeChange, EdgeChange, Connection,
 } from '@xyflow/react';
+import { toPng, toJpeg } from 'html-to-image';
 import type { NodeData, EdgeData, AnalysisResult } from '../types';
 import type { Template } from '../data/templates';
 import { analyzeGraph } from '../engine/analyze';
@@ -70,6 +73,8 @@ interface DiagramState {
   loadTemplate: (template: Template) => void;
   setDiagramName: (name: string) => void;
   exportJSON: () => void;
+  exportPNG: () => Promise<void>;
+  exportJPG: () => Promise<void>;
   importJSON: (json: string) => void;
 }
 
@@ -187,6 +192,45 @@ export const useDiagramStore = create<DiagramState>()(
         a.download = `${diagramName.replace(/\s+/g, '-').toLowerCase()}.json`;
         a.click();
         URL.revokeObjectURL(url);
+      },
+
+      exportPNG: async () => {
+        const { nodes, diagramName } = get();
+        const W = 2560, H = 1440, PAD = 32;
+        const bounds = getNodesBounds(nodes);
+        const { x, y, zoom } = getViewportForBounds(bounds, W - PAD * 2, H - PAD * 2, 0.1, 4, PAD);
+        const viewport = document.querySelector<HTMLElement>('.react-flow__viewport');
+        if (!viewport) return;
+        const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-base').trim() || '#0a0f1e';
+        const dataUrl = await toPng(viewport, {
+          width: W, height: H,
+          style: { width: String(W), height: String(H), transform: `translate(${x}px, ${y}px) scale(${zoom})` },
+          backgroundColor: bg,
+        });
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `${diagramName.replace(/\s+/g, '-').toLowerCase()}.png`;
+        a.click();
+      },
+
+      exportJPG: async () => {
+        const { nodes, diagramName } = get();
+        const W = 2560, H = 1440, PAD = 32;
+        const bounds = getNodesBounds(nodes);
+        const { x, y, zoom } = getViewportForBounds(bounds, W - PAD * 2, H - PAD * 2, 0.1, 4, PAD);
+        const viewport = document.querySelector<HTMLElement>('.react-flow__viewport');
+        if (!viewport) return;
+        const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-base').trim() || '#0a0f1e';
+        const dataUrl = await toJpeg(viewport, {
+          width: W, height: H,
+          style: { width: String(W), height: String(H), transform: `translate(${x}px, ${y}px) scale(${zoom})` },
+          backgroundColor: bg,
+          quality: 0.92,
+        });
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `${diagramName.replace(/\s+/g, '-').toLowerCase()}.jpg`;
+        a.click();
       },
 
       importJSON: (json) => {
