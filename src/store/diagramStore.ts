@@ -14,6 +14,37 @@ import { analyzeGraph } from '../engine/analyze';
 
 type AppNode = Node<NodeData>;
 
+// Derives the display label shown on the edge line in the canvas.
+// percent  → "30%"
+// absolute → "≤500/s"
+// auto     → "1.2k/s" (only after analysis; empty otherwise)
+// If the user has also set an endpoint label (e.g. "GET /users"), it is
+// prepended: "GET /users · 1.2k/s"
+function computeEdgeLabel(d: EdgeData): string | undefined {
+  let traffic: string | undefined;
+
+  if (d.distributionMode === 'percent' && (d.distributionValue ?? 0) > 0) {
+    traffic = `${d.distributionValue}%`;
+  } else if (d.distributionMode === 'absolute' && (d.distributionValue ?? 0) > 0) {
+    const v = d.distributionValue ?? 0;
+    traffic = `≤${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}/s`;
+  } else if (d.distributionMode === 'auto' && (d.computedQPS ?? 0) > 0) {
+    const v = d.computedQPS ?? 0;
+    traffic = v >= 1000 ? `${(v / 1000).toFixed(1)}k/s` : `${v.toFixed(0)}/s`;
+  }
+
+  if (d.label && traffic) return `${d.label} · ${traffic}`;
+  if (d.label) return d.label;
+  return traffic;
+}
+
+function applyEdgeLabels(edges: Edge[]): Edge[] {
+  return edges.map(e => ({
+    ...e,
+    label: computeEdgeLabel(e.data as EdgeData) || undefined,
+  }));
+}
+
 interface DiagramState {
   nodes: AppNode[];
   edges: Edge[];
@@ -67,6 +98,7 @@ export const useDiagramStore = create<DiagramState>()(
               animated: true,
               style: { stroke: '#22d3ee', strokeWidth: 2 },
               data: { distributionMode: 'auto' } as EdgeData,
+              // label is undefined for new auto edges (no QPS computed yet)
             },
             s.edges
           ),
@@ -89,15 +121,23 @@ export const useDiagramStore = create<DiagramState>()(
         set(s => ({
           edges: s.edges.map(e => {
             if (e.id !== id) return e;
-            const newData = { ...e.data, ...patch };
-            return { ...e, data: newData, label: (newData as EdgeData).label || undefined };
+            const newData = { ...e.data, ...patch } as EdgeData;
+            return { ...e, data: newData, label: computeEdgeLabel(newData) || undefined };
           }),
         })),
 
       runAnalysis: () => {
         const { nodes, edges } = get();
-        const { updatedNodes, results } = analyzeGraph(nodes, edges);
-        set({ nodes: updatedNodes, analysisResults: results });
+        const { updatedNodes, results, edgeFlows } = analyzeGraph(nodes, edges);
+        // Write computed QPS back to each edge and refresh labels
+        const updatedEdges = edges.map(e => {
+          const newData: EdgeData = {
+            ...(e.data as EdgeData),
+            computedQPS: edgeFlows.get(e.id) ?? 0,
+          };
+          return { ...e, data: newData, label: computeEdgeLabel(newData) || undefined };
+        });
+        set({ nodes: updatedNodes, edges: updatedEdges, analysisResults: results });
       },
 
       newDiagram: () =>
@@ -128,7 +168,8 @@ export const useDiagramStore = create<DiagramState>()(
       loadTemplate: (template) =>
         set({
           nodes: template.nodes as AppNode[],
-          edges: template.edges,
+          // Apply config-based labels immediately (percent/absolute show without needing analysis)
+          edges: applyEdgeLabels(template.edges),
           diagramName: template.name,
           analysisResults: [],
           selectedNodeId: null,
@@ -151,7 +192,14 @@ export const useDiagramStore = create<DiagramState>()(
       importJSON: (json) => {
         try {
           const parsed = JSON.parse(json);
-          set({ nodes: parsed.nodes ?? [], edges: parsed.edges ?? [], diagramName: parsed.name ?? 'Imported', analysisResults: [], selectedNodeId: null, selectedEdgeId: null });
+          set({
+            nodes: parsed.nodes ?? [],
+            edges: applyEdgeLabels(parsed.edges ?? []),
+            diagramName: parsed.name ?? 'Imported',
+            analysisResults: [],
+            selectedNodeId: null,
+            selectedEdgeId: null,
+          });
         } catch {
           alert('Invalid JSON file');
         }

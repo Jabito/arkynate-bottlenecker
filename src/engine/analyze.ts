@@ -39,7 +39,7 @@ export function analyzeGraph(
   nodes: Node<NodeData>[],
   edges: Edge[],
   qpsMultiplier = 1,
-): { updatedNodes: Node<NodeData>[]; results: AnalysisResult[] } {
+): { updatedNodes: Node<NodeData>[]; results: AnalysisResult[]; edgeFlows: Map<string, number> } {
   const inEdgeIds  = new Map<string, string[]>();
   const outEdgeIds = new Map<string, string[]>();
   const edgeById   = new Map<string, Edge>();
@@ -219,5 +219,5 @@ export function analyzeGraph(
 
   const statusOrder: Record<NodeStatus, number> = { critical: 0, near: 1, warning: 2, healthy: 3 };
   results.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
-  return { updatedNodes, results };
+  return { updatedNodes, results, edgeFlows: edgeQPS };
 }

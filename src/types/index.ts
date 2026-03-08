@@ -114,4 +114,5 @@ export interface EdgeData extends Record<string, unknown> {
   distributionMode: 'auto' | 'percent' | 'absolute';
   distributionValue?: number;
   retryCount?: number;
+  computedQPS?: number;
 }

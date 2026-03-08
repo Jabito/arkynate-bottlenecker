@@ -138,6 +138,11 @@ function QueueConfig({ data, onUpdate }: { data: QueueData; onUpdate: (p: Partia
   );
 }
 
+function fmtQPS(qps: number): string {
+  if (qps >= 1000) return `${(qps / 1000).toFixed(1)}k/s`;
+  return `${qps.toFixed(0)}/s`;
+}
+
 function EdgeConfigPanel() {
   const { edges, selectedEdgeId, updateEdgeData } = useDiagramStore();
   const edge = edges.find(e => e.id === selectedEdgeId);
@@ -146,11 +151,15 @@ function EdgeConfigPanel() {
   const d = (edge.data as EdgeData | undefined) ?? { distributionMode: 'auto' as const };
   const onUpdate = (patch: Partial<EdgeData>) => updateEdgeData(edge.id, patch);
 
-  const infoText = {
-    auto:     'Remaining QPS divided equally among all auto edges.',
-    percent:  "This edge receives the given % of the source's outgoing QPS.",
-    absolute: 'This edge receives exactly the specified QPS (capped at source output).',
-  }[d.distributionMode];
+  const computed = d.computedQPS ?? 0;
+
+  const infoText: string = d.distributionMode === 'auto'
+    ? computed > 0
+      ? `Splits load equally among all auto edges from this source. Currently sending ${fmtQPS(computed)} through this edge.`
+      : 'Splits load equally among all auto edges from this source. Run Analyze to see actual QPS.'
+    : d.distributionMode === 'percent'
+    ? `This edge carries a fixed ${d.distributionValue ?? 0}% of the source's outgoing QPS${computed > 0 ? ` — currently ~${fmtQPS(computed)}` : ''}.`
+    : `This edge is hard-capped at ${d.distributionValue ?? 0} QPS regardless of source load — excess is absorbed by other edges.`;
 
   return (
     <>
@@ -164,12 +173,12 @@ function EdgeConfigPanel() {
       <Field label="Distribution">
         <Select value={d.distributionMode} onChange={e => onUpdate({ distributionMode: e.target.value as EdgeData['distributionMode'] })}>
           <option value="auto">Auto (equal split)</option>
-          <option value="percent">Percentage</option>
-          <option value="absolute">Absolute QPS</option>
+          <option value="percent">Percentage of source</option>
+          <option value="absolute">Absolute QPS cap</option>
         </Select>
       </Field>
       {d.distributionMode !== 'auto' && (
-        <Field label={d.distributionMode === 'percent' ? 'Percentage (0-100)' : 'QPS'}>
+        <Field label={d.distributionMode === 'percent' ? 'Percentage (0–100)' : 'QPS cap'}>
           <Input
             type="number"
             min={0}
