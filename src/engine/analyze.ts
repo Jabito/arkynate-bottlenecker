@@ -5,7 +5,7 @@ function getCapacity(data: NodeData): number {
   switch (data.kind) {
     case 'loadGenerator': return data.outputQPS;
     case 'loadBalancer':  return data.maxQPS;
-    case 'server':        return data.maxQPS; // maxQPS is total capacity
+    case 'server':        return data.maxQPS;
     case 'database':      return data.maxReadQPS + data.maxWriteQPS;
     case 'cache':         return data.maxQPS;
     case 'queue':         return data.maxThroughput * data.consumers;
@@ -21,24 +21,30 @@ function toStatus(utilization: number): NodeStatus {
 
 function calcOutgoingQPS(data: NodeData, incomingQPS: number): number {
   switch (data.kind) {
-    case 'loadGenerator': return data.outputQPS;
+    case 'loadGenerator': return incomingQPS;
     case 'cache': return incomingQPS * (1 - data.hitRate / 100);
     default: return incomingQPS;
   }
 }
 
+const DEFAULT_LATENCY: Partial<Record<NodeData['kind'], number>> = {
+  loadBalancer: 2,
+  server:       50,
+  database:     15,
+  cache:        1,
+  queue:        5,
+};
+
 export function analyzeGraph(
   nodes: Node<NodeData>[],
-  edges: Edge[]
+  edges: Edge[],
+  qpsMultiplier = 1,
 ): { updatedNodes: Node<NodeData>[]; results: AnalysisResult[] } {
-  // Build adjacency maps indexed by edge ID for weighted distribution
-  const inEdgeIds  = new Map<string, string[]>(); // nodeId → incoming edgeIds
-  const outEdgeIds = new Map<string, string[]>(); // nodeId → outgoing edgeIds
+  const inEdgeIds  = new Map<string, string[]>();
+  const outEdgeIds = new Map<string, string[]>();
   const edgeById   = new Map<string, Edge>();
-
-  // Also track node→node adjacency for topological sort
-  const inNodes  = new Map<string, string[]>();
-  const outNodes = new Map<string, string[]>();
+  const inNodes    = new Map<string, string[]>();
+  const outNodes   = new Map<string, string[]>();
 
   nodes.forEach(n => {
     inEdgeIds.set(n.id, []);
@@ -75,20 +81,19 @@ export function analyzeGraph(
   }
   nodes.forEach(n => { if (!visited.has(n.id)) order.push(n.id); });
 
-  // Propagate load with per-edge QPS tracking
+  const nodeMap      = new Map<string, Node<NodeData>>(nodes.map(n => [n.id, n]));
   const actualQPSMap = new Map<string, number>();
   const edgeQPS      = new Map<string, number>();
-  const nodeMap      = new Map<string, Node<NodeData>>(nodes.map(n => [n.id, n]));
 
+  // Pass 1: propagate QPS with retry amplification
   order.forEach(id => {
     const node = nodeMap.get(id);
     if (!node) return;
     const data = node.data;
 
-    // Compute incoming QPS from sum of all incoming edge flows
     let incoming = 0;
     if (data.kind === 'loadGenerator') {
-      incoming = data.outputQPS;
+      incoming = data.outputQPS * qpsMultiplier;
     } else {
       (inEdgeIds.get(id) ?? []).forEach(eid => {
         incoming += edgeQPS.get(eid) ?? 0;
@@ -96,7 +101,6 @@ export function analyzeGraph(
     }
     actualQPSMap.set(id, incoming);
 
-    // Distribute outgoing QPS across outgoing edges by distribution mode
     const outgoing     = calcOutgoingQPS(data, incoming);
     const myOutEdgeIds = outEdgeIds.get(id) ?? [];
     if (myOutEdgeIds.length === 0) return;
@@ -113,36 +117,104 @@ export function analyzeGraph(
       else autoEdges.push(eid);
     });
 
+    // Apply retry amplification: amplifiedQPS = base × (1 + (targetErrorRate/100) × retryCount)
+    const withRetry = (eid: string, baseVal: number): number => {
+      const e = edgeById.get(eid);
+      const edgeData = e?.data as EdgeData | undefined;
+      const retryCount = edgeData?.retryCount ?? 0;
+      if (retryCount === 0) return baseVal;
+      const targetNode = e ? nodeMap.get(e.target) : undefined;
+      const targetErrorRate = (targetNode?.data as { errorRate?: number } | undefined)?.errorRate ?? 0;
+      return baseVal * (1 + (targetErrorRate / 100) * retryCount);
+    };
+
     let remaining = outgoing;
 
     absoluteEdges.forEach(eid => {
       const d = edgeById.get(eid)?.data as EdgeData | undefined;
       const val = Math.min(d?.distributionValue ?? 0, remaining);
-      edgeQPS.set(eid, val);
+      edgeQPS.set(eid, withRetry(eid, val));
       remaining -= val;
     });
 
     percentEdges.forEach(eid => {
       const d = edgeById.get(eid)?.data as EdgeData | undefined;
       const val = outgoing * ((d?.distributionValue ?? 0) / 100);
-      edgeQPS.set(eid, val);
+      edgeQPS.set(eid, withRetry(eid, val));
       remaining -= val;
     });
 
     if (autoEdges.length > 0) {
       const perAuto = Math.max(0, remaining) / autoEdges.length;
-      autoEdges.forEach(eid => edgeQPS.set(eid, perAuto));
+      autoEdges.forEach(eid => edgeQPS.set(eid, withRetry(eid, perAuto)));
     }
+  });
+
+  // Pass 2: compute error rates, latency, cumulative latency in topological order
+  const cumulativeLatMap   = new Map<string, number>();
+  const utilizationMap     = new Map<string, number>();
+  const statusMap          = new Map<string, NodeStatus>();
+  const errorRatePctMap    = new Map<string, number>();
+  const errorQPSMap        = new Map<string, number>();
+  const estimatedLatMap    = new Map<string, number>();
+
+  order.forEach(id => {
+    const node = nodeMap.get(id);
+    if (!node) return;
+    const actual   = actualQPSMap.get(id) ?? 0;
+    const capacity = getCapacity(node.data);
+    const util     = capacity > 0 ? (actual / capacity) * 100 : 0;
+    utilizationMap.set(id, util);
+    statusMap.set(id, toStatus(util));
+
+    const configuredErrorRate = (node.data as { errorRate?: number }).errorRate ?? 0;
+    const overloadError       = Math.max(0, util - 100);
+    const totalErrorRatePct   = Math.min(100, configuredErrorRate + overloadError);
+    errorRatePctMap.set(id, totalErrorRatePct);
+    errorQPSMap.set(id, actual * totalErrorRatePct / 100);
+
+    const baseLatencyMs     = (node.data as { baseLatencyMs?: number }).baseLatencyMs ?? (DEFAULT_LATENCY[node.data.kind] ?? 0);
+    const utilFraction      = util / 100;
+    const effectiveLatency  = baseLatencyMs > 0
+      ? baseLatencyMs / (1 - Math.min(utilFraction, 0.999))
+      : 0;
+    estimatedLatMap.set(id, effectiveLatency);
+
+    let maxPredLat = 0;
+    (inNodes.get(id) ?? []).forEach(predId => {
+      const predLat = cumulativeLatMap.get(predId) ?? 0;
+      if (predLat > maxPredLat) maxPredLat = predLat;
+    });
+    cumulativeLatMap.set(id, maxPredLat + effectiveLatency);
   });
 
   const results: AnalysisResult[] = [];
   const updatedNodes = nodes.map(n => {
-    const actual      = actualQPSMap.get(n.id) ?? 0;
-    const capacity    = getCapacity(n.data);
-    const utilization = capacity > 0 ? (actual / capacity) * 100 : 0;
-    const status      = toStatus(utilization);
-    results.push({ nodeId: n.id, label: n.data.label, kind: n.data.kind, actualQPS: actual, capacity, utilization, status });
-    return { ...n, data: { ...n.data, actualQPS: actual, status } as NodeData };
+    const actual             = actualQPSMap.get(n.id) ?? 0;
+    const capacity           = getCapacity(n.data);
+    const utilization        = utilizationMap.get(n.id) ?? 0;
+    const status             = statusMap.get(n.id) ?? 'healthy';
+    const errorQPS           = errorQPSMap.get(n.id) ?? 0;
+    const errorRatePct       = errorRatePctMap.get(n.id) ?? 0;
+    const estimatedLatencyMs = estimatedLatMap.get(n.id) ?? 0;
+    const cumulativeLatencyMs = cumulativeLatMap.get(n.id) ?? 0;
+
+    results.push({
+      nodeId: n.id, label: n.data.label, kind: n.data.kind,
+      actualQPS: actual, capacity, utilization, status,
+      errorQPS, errorRatePct, estimatedLatencyMs, cumulativeLatencyMs,
+    });
+
+    return {
+      ...n,
+      data: {
+        ...n.data,
+        actualQPS: actual,
+        status,
+        errorRatePct,
+        estimatedLatencyMs,
+      } as NodeData,
+    };
   });
 
   const statusOrder: Record<NodeStatus, number> = { critical: 0, near: 1, warning: 2, healthy: 3 };

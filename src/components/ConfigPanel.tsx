@@ -55,6 +55,8 @@ function LoadBalancerConfig({ data, onUpdate }: { data: LoadBalancerData; onUpda
           <option value="least-conn">Least Connections</option>
         </Select>
       </Field>
+      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
+      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="2" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
     </>
   );
 }
@@ -65,6 +67,8 @@ function ServerConfig({ data, onUpdate }: { data: ServerData; onUpdate: (p: Part
       <Field label="Label"><Input value={data.label} onChange={e => onUpdate({ label: e.target.value })} /></Field>
       <Field label="Max QPS (total)"><Input type="number" min={1} value={data.maxQPS} onChange={e => onUpdate({ maxQPS: Number(e.target.value) })} /></Field>
       <Field label="Instances"><Input type="number" min={1} value={data.instances} onChange={e => onUpdate({ instances: Number(e.target.value) })} /></Field>
+      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
+      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="50" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
     </>
   );
 }
@@ -84,6 +88,8 @@ function DatabaseConfig({ data, onUpdate }: { data: DatabaseData; onUpdate: (p: 
       <Field label="Max Read QPS"><Input type="number" min={1} value={data.maxReadQPS} onChange={e => onUpdate({ maxReadQPS: Number(e.target.value) })} /></Field>
       <Field label="Max Write QPS"><Input type="number" min={1} value={data.maxWriteQPS} onChange={e => onUpdate({ maxWriteQPS: Number(e.target.value) })} /></Field>
       <Field label="Read Replicas"><Input type="number" min={0} value={data.readReplicas} onChange={e => onUpdate({ readReplicas: Number(e.target.value) })} /></Field>
+      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
+      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="15" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
     </>
   );
 }
@@ -104,6 +110,8 @@ function CacheConfig({ data, onUpdate }: { data: CacheData; onUpdate: (p: Partia
       <div style={{ fontSize: 11, color: '#64748b', background: '#0a1628', borderRadius: 6, padding: '6px 10px', marginBottom: 14 }}>
         {data.hitRate}% cache hits — only {100 - data.hitRate}% reach downstream
       </div>
+      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
+      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="1" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
     </>
   );
 }
@@ -124,6 +132,8 @@ function QueueConfig({ data, onUpdate }: { data: QueueData; onUpdate: (p: Partia
       <div style={{ fontSize: 11, color: '#22d3ee', background: '#0a1628', borderRadius: 6, padding: '6px 10px', marginBottom: 14 }}>
         Total capacity: {(data.maxThroughput * data.consumers).toLocaleString()} msg/s
       </div>
+      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
+      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="5" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
     </>
   );
 }
@@ -172,6 +182,15 @@ function EdgeConfigPanel() {
       <div style={{ fontSize: 11, color: '#64748b', background: '#0a1628', borderRadius: 6, padding: '6px 10px', marginBottom: 14, lineHeight: 1.6 }}>
         {infoText}
       </div>
+      <Field label="Retries on error">
+        <Input
+          type="number"
+          min={0}
+          max={5}
+          value={d.retryCount ?? 0}
+          onChange={e => onUpdate({ retryCount: Number(e.target.value) })}
+        />
+      </Field>
     </>
   );
 }

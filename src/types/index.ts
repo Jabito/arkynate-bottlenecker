@@ -22,8 +22,12 @@ export interface LoadBalancerData extends Record<string, unknown> {
   label: string;
   maxQPS: number;
   strategy: 'round-robin' | 'weighted' | 'least-conn';
+  errorRate?: number;
+  baseLatencyMs?: number;
   actualQPS?: number;
   status?: NodeStatus;
+  errorRatePct?: number;
+  estimatedLatencyMs?: number;
 }
 
 export interface ServerData extends Record<string, unknown> {
@@ -31,8 +35,12 @@ export interface ServerData extends Record<string, unknown> {
   label: string;
   maxQPS: number;
   instances: number;
+  errorRate?: number;
+  baseLatencyMs?: number;
   actualQPS?: number;
   status?: NodeStatus;
+  errorRatePct?: number;
+  estimatedLatencyMs?: number;
 }
 
 export interface DatabaseData extends Record<string, unknown> {
@@ -43,8 +51,12 @@ export interface DatabaseData extends Record<string, unknown> {
   maxWriteQPS: number;
   readReplicas: number;
   readRatio: number;
+  errorRate?: number;
+  baseLatencyMs?: number;
   actualQPS?: number;
   status?: NodeStatus;
+  errorRatePct?: number;
+  estimatedLatencyMs?: number;
 }
 
 export interface CacheData extends Record<string, unknown> {
@@ -53,8 +65,12 @@ export interface CacheData extends Record<string, unknown> {
   cacheType: 'redis' | 'memcached' | 'cdn';
   hitRate: number;
   maxQPS: number;
+  errorRate?: number;
+  baseLatencyMs?: number;
   actualQPS?: number;
   status?: NodeStatus;
+  errorRatePct?: number;
+  estimatedLatencyMs?: number;
 }
 
 export interface QueueData extends Record<string, unknown> {
@@ -63,8 +79,12 @@ export interface QueueData extends Record<string, unknown> {
   queueType: 'kafka' | 'rabbitmq' | 'sqs';
   maxThroughput: number;
   consumers: number;
+  errorRate?: number;
+  baseLatencyMs?: number;
   actualQPS?: number;
   status?: NodeStatus;
+  errorRatePct?: number;
+  estimatedLatencyMs?: number;
 }
 
 export type NodeData =
@@ -83,10 +103,15 @@ export interface AnalysisResult {
   capacity: number;
   utilization: number;
   status: NodeStatus;
+  errorQPS: number;
+  errorRatePct: number;
+  estimatedLatencyMs: number;
+  cumulativeLatencyMs: number;
 }
 
 export interface EdgeData extends Record<string, unknown> {
   label?: string;
   distributionMode: 'auto' | 'percent' | 'absolute';
   distributionValue?: number;
+  retryCount?: number;
 }

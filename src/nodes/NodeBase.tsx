@@ -45,7 +45,21 @@ export function NodeBase({
           <div className="bn-node-type">{typeLabel}</div>
         </div>
       </div>
-      <div className="bn-node-body">{children}</div>
+      <div className="bn-node-body">
+        {children}
+        {((data as { errorRatePct?: number }).errorRatePct ?? 0) > 0 && (
+          <div style={{ marginTop: 4 }}>
+            <span style={{ fontSize: 10, color: '#ef4444', background: 'rgba(239,68,68,0.15)', padding: '1px 6px', borderRadius: 10, fontWeight: 600 }}>
+              ERR {((data as { errorRatePct?: number }).errorRatePct ?? 0).toFixed(0)}%
+            </span>
+          </div>
+        )}
+        {((data as { estimatedLatencyMs?: number }).estimatedLatencyMs ?? 0) > 0 && (
+          <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
+            ~{formatLatency((data as { estimatedLatencyMs?: number }).estimatedLatencyMs ?? 0)}
+          </div>
+        )}
+      </div>
       {hasOutput && (
         <Handle type="source" position={Position.Right}
           style={{ background: accentColor, borderColor: accentColor }} />
@@ -75,6 +89,12 @@ export function Meter({ utilization }: { utilization?: number }) {
       <div className="bn-meter-fill" style={{ width: `${pct}%`, background: color }} />
     </div>
   );
+}
+
+function formatLatency(ms: number): string {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+  if (ms >= 1)    return `${ms.toFixed(0)}ms`;
+  return '< 1ms';
 }
 
 export function qpsLabel(qps?: number): string {

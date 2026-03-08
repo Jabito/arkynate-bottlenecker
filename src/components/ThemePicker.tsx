@@ -3,13 +3,9 @@ import { useThemeStore } from '../store/themeStore';
 import type { Theme } from '../store/themeStore';
 
 const THEMES: { id: Theme; name: string; bg: string; accent: string }[] = [
-  { id: 'dark',       name: 'Dark',       bg: '#0a0f1e', accent: '#22d3ee' },
-  { id: 'light',      name: 'Light',      bg: '#f8fafc', accent: '#0891b2' },
-  { id: 'futuristic', name: 'Futuristic', bg: '#07000f', accent: '#c084fc' },
-  { id: 'matrix',     name: 'Matrix',     bg: '#001400', accent: '#00ff41' },
-  { id: 'blueprint',  name: 'Blueprint',  bg: '#0a1628', accent: '#ffffff' },
-  { id: 'solarized',  name: 'Solarized',  bg: '#002b36', accent: '#2aa198' },
-  { id: 'pixel',      name: 'Pixel',      bg: '#1a0533', accent: '#ff00ff' },
+  { id: 'dark',   name: 'Dark',   bg: '#0a0f1e', accent: '#22d3ee' },
+  { id: 'light',  name: 'Light',  bg: '#f8fafc', accent: '#0891b2' },
+  { id: 'matrix', name: 'Matrix', bg: '#001400', accent: '#00ff41' },
 ];
 
 export function ThemePicker() {

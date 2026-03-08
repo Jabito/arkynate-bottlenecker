@@ -298,7 +298,7 @@ export function Navbar() {
         )}
 
         <a
-          href="mailto:jabito.javier@gmail.com?subject=Bottlenecker%20Feedback"
+          href="mailto:jabito.javier@gmail.com?subject=Bottlenecker%20Issue"
           style={{
             background: 'transparent',
             border: '1px solid transparent',
@@ -325,7 +325,7 @@ export function Navbar() {
             e.currentTarget.style.borderColor = 'transparent';
           }}
         >
-          Contact
+          Report an Issue
         </a>
       </div>
 

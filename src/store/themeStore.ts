@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type Theme = 'dark' | 'light' | 'futuristic' | 'matrix' | 'blueprint' | 'solarized' | 'pixel';
+export type Theme = 'dark' | 'light' | 'matrix';
 
 function applyTheme(theme: Theme) {
   const body = document.body;

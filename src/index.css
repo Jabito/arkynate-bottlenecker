@@ -33,19 +33,6 @@ body.theme-light {
   color: #0f172a;
 }
 
-body.theme-futuristic {
-  --bg-base: #07000f;
-  --bg-surface: #0d0020;
-  --bg-elevated: #150030;
-  --border: #2d1060;
-  --cyan: #22d3ee;
-  --purple: #c084fc;
-  --green: #22c55e;
-  --yellow: #eab308;
-  --orange: #f97316;
-  --red: #ef4444;
-}
-
 body.theme-matrix {
   --bg-base: #000000;
   --bg-surface: #001400;
@@ -64,48 +51,6 @@ body.theme-matrix .bn-node-type,
 body.theme-matrix .bn-stat {
   font-family: 'Courier New', monospace;
 }
-
-body.theme-blueprint {
-  --bg-base: #0a1628;
-  --bg-surface: #0d1e38;
-  --bg-elevated: #112544;
-  --border: #1e3a5f;
-  --cyan: #ffffff;
-  --purple: #a0c4ff;
-  --green: #64ffda;
-  --yellow: #ffd166;
-  --orange: #f4845f;
-  --red: #ef476f;
-}
-
-body.theme-solarized {
-  --bg-base: #002b36;
-  --bg-surface: #073642;
-  --bg-elevated: #094555;
-  --border: #124555;
-  --cyan: #2aa198;
-  --purple: #6c71c4;
-  --green: #859900;
-  --yellow: #b58900;
-  --orange: #cb4b16;
-  --red: #dc322f;
-}
-
-body.theme-pixel {
-  --bg-base: #1a0533;
-  --bg-surface: #2d0a4e;
-  --bg-elevated: #3d1060;
-  --border: #5a1a80;
-  --cyan: #00ff00;
-  --purple: #ff00ff;
-  --green: #00ff00;
-  --yellow: #ffff00;
-  --orange: #ff8800;
-  --red: #ff0000;
-}
-
-body.theme-pixel .bn-node { border-radius: 2px; }
-body.theme-pixel .react-flow__handle { border-radius: 2px; }
 
 /* ─────────────────────────────────────────────────────────── */
 
