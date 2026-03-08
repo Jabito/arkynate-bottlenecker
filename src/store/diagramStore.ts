@@ -5,7 +5,6 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   getNodesBounds,
-  getViewportForBounds,
 } from '@xyflow/react';
 import type {
   Node, Edge, NodeChange, EdgeChange, Connection,
@@ -196,15 +195,18 @@ export const useDiagramStore = create<DiagramState>()(
 
       exportPNG: async () => {
         const { nodes, diagramName } = get();
-        const W = 2560, H = 1440, PAD = 32;
-        const bounds = getNodesBounds(nodes);
-        const { x, y, zoom } = getViewportForBounds(bounds, W - PAD * 2, H - PAD * 2, 0.1, 4, PAD);
         const viewport = document.querySelector<HTMLElement>('.react-flow__viewport');
         if (!viewport) return;
+        const PAD = 48, ZOOM = 1.5;
+        const bounds = getNodesBounds(nodes);
+        const W = Math.ceil(bounds.width * ZOOM) + PAD * 2;
+        const H = Math.ceil(bounds.height * ZOOM) + PAD * 2;
+        const tx = -bounds.x * ZOOM + PAD;
+        const ty = -bounds.y * ZOOM + PAD;
         const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-base').trim() || '#0a0f1e';
         const dataUrl = await toPng(viewport, {
           width: W, height: H,
-          style: { width: String(W), height: String(H), transform: `translate(${x}px, ${y}px) scale(${zoom})` },
+          style: { width: String(W), height: String(H), transform: `translate(${tx}px, ${ty}px) scale(${ZOOM})` },
           backgroundColor: bg,
         });
         const a = document.createElement('a');
@@ -215,15 +217,18 @@ export const useDiagramStore = create<DiagramState>()(
 
       exportJPG: async () => {
         const { nodes, diagramName } = get();
-        const W = 2560, H = 1440, PAD = 32;
-        const bounds = getNodesBounds(nodes);
-        const { x, y, zoom } = getViewportForBounds(bounds, W - PAD * 2, H - PAD * 2, 0.1, 4, PAD);
         const viewport = document.querySelector<HTMLElement>('.react-flow__viewport');
         if (!viewport) return;
+        const PAD = 48, ZOOM = 1.5;
+        const bounds = getNodesBounds(nodes);
+        const W = Math.ceil(bounds.width * ZOOM) + PAD * 2;
+        const H = Math.ceil(bounds.height * ZOOM) + PAD * 2;
+        const tx = -bounds.x * ZOOM + PAD;
+        const ty = -bounds.y * ZOOM + PAD;
         const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-base').trim() || '#0a0f1e';
         const dataUrl = await toJpeg(viewport, {
           width: W, height: H,
-          style: { width: String(W), height: String(H), transform: `translate(${x}px, ${y}px) scale(${zoom})` },
+          style: { width: String(W), height: String(H), transform: `translate(${tx}px, ${ty}px) scale(${ZOOM})` },
           backgroundColor: bg,
           quality: 0.92,
         });
