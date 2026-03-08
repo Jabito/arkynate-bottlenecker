@@ -17,12 +17,104 @@
 
 * { box-sizing: border-box; }
 
+/* ─── Themes ────────────────────────────────────────────────── */
+
+body.theme-light {
+  --bg-base: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --border: #e2e8f0;
+  --cyan: #0891b2;
+  --purple: #7c3aed;
+  --green: #16a34a;
+  --yellow: #ca8a04;
+  --orange: #ea580c;
+  --red: #dc2626;
+  color: #0f172a;
+}
+
+body.theme-futuristic {
+  --bg-base: #07000f;
+  --bg-surface: #0d0020;
+  --bg-elevated: #150030;
+  --border: #2d1060;
+  --cyan: #22d3ee;
+  --purple: #c084fc;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --orange: #f97316;
+  --red: #ef4444;
+}
+
+body.theme-matrix {
+  --bg-base: #000000;
+  --bg-surface: #001400;
+  --bg-elevated: #002800;
+  --border: #005200;
+  --cyan: #00ff41;
+  --purple: #00cc33;
+  --green: #00ff41;
+  --yellow: #aaff00;
+  --orange: #88ff00;
+  --red: #ff0044;
+}
+
+body.theme-matrix .bn-node-title,
+body.theme-matrix .bn-node-type,
+body.theme-matrix .bn-stat {
+  font-family: 'Courier New', monospace;
+}
+
+body.theme-blueprint {
+  --bg-base: #0a1628;
+  --bg-surface: #0d1e38;
+  --bg-elevated: #112544;
+  --border: #1e3a5f;
+  --cyan: #ffffff;
+  --purple: #a0c4ff;
+  --green: #64ffda;
+  --yellow: #ffd166;
+  --orange: #f4845f;
+  --red: #ef476f;
+}
+
+body.theme-solarized {
+  --bg-base: #002b36;
+  --bg-surface: #073642;
+  --bg-elevated: #094555;
+  --border: #124555;
+  --cyan: #2aa198;
+  --purple: #6c71c4;
+  --green: #859900;
+  --yellow: #b58900;
+  --orange: #cb4b16;
+  --red: #dc322f;
+}
+
+body.theme-pixel {
+  --bg-base: #1a0533;
+  --bg-surface: #2d0a4e;
+  --bg-elevated: #3d1060;
+  --border: #5a1a80;
+  --cyan: #00ff00;
+  --purple: #ff00ff;
+  --green: #00ff00;
+  --yellow: #ffff00;
+  --orange: #ff8800;
+  --red: #ff0000;
+}
+
+body.theme-pixel .bn-node { border-radius: 2px; }
+body.theme-pixel .react-flow__handle { border-radius: 2px; }
+
+/* ─────────────────────────────────────────────────────────── */
+
 body {
   margin: 0;
   background: var(--bg-base);
   color: #e2e8f0;
   font-family: 'Inter', sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* React Flow overrides */

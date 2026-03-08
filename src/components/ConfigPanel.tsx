@@ -214,7 +214,7 @@ export function ConfigPanel() {
         <div style={{ fontSize: 11, color: '#334155', lineHeight: 1.5 }}>
           Click a node or edge to configure its properties.
         </div>
-        <AdBanner slot="TODO_SLOT_ID_SIDEBAR" format="rectangle"
+        <AdBanner slot="5483690415" format="rectangle"
           style={{ width: 200, minHeight: 200, margin: '16px auto 0' }} />
       </div>
     );
