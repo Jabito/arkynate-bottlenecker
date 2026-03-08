@@ -3,6 +3,7 @@ import { Navbar } from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ComponentsPage from './pages/ComponentsPage';
 import PlaygroundPage from './pages/PlaygroundPage';
+import LessonsPage from './pages/LessonsPage';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Routes>
           <Route path="/"           element={<HomePage />} />
           <Route path="/components" element={<ComponentsPage />} />
+          <Route path="/lessons"    element={<LessonsPage />} />
           <Route path="/playground" element={<PlaygroundPage />} />
           <Route path="*"           element={<Navigate to="/" replace />} />
         </Routes>

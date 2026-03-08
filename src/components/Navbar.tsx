@@ -148,6 +148,7 @@ export function Navbar() {
         <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <NavLink to="/"           style={navLinkStyle} end>Home</NavLink>
           <NavLink to="/components" style={navLinkStyle}>Components</NavLink>
+          <NavLink to="/lessons"    style={navLinkStyle}>Lessons</NavLink>
           <NavLink to="/playground" style={navLinkStyle}>Playground</NavLink>
         </nav>
 

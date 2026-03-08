@@ -1,0 +1,344 @@
+import type { Template } from './templates';
+
+const edgeStyle = { stroke: '#22d3ee', strokeWidth: 2 };
+const edgeBase = { animated: true, style: edgeStyle, data: { distributionMode: 'auto' as const } };
+
+export interface Lesson {
+  id: string;
+  title: string;
+  subtitle: string;
+  component: string;
+  icon: string;
+  badgeColor: string;
+  problem: string;
+  symptoms: string[];
+  rootCause: string;
+  mitigations: string[];
+  diagram: Template;
+}
+
+export const LESSONS: Lesson[] = [
+  {
+    id: 'server-cpu-saturation',
+    title: 'Server CPU Saturation',
+    subtitle: 'When your compute tier can\'t keep up with incoming load',
+    component: 'Server',
+    icon: '🖥️',
+    badgeColor: '#3b82f6',
+    problem: 'Two API servers, each provisioned for 2,000 QPS, receive 2,500 QPS apiece from a load balancer handling 5,000 QPS of total traffic. Neither server has any headroom — both saturate simultaneously, causing unbounded request queuing and spiking latency across the entire user base.',
+    symptoms: [
+      'CPU pegged at 95–100% across all instances simultaneously',
+      'p99 latency climbs from ~50 ms to 500 ms+ as the M/M/1 queue grows',
+      'Throughput plateaus even as traffic continues to climb',
+      'Load balancer health checks start failing, causing instance flapping',
+      'HTTP 5xx error rates rise as servers begin rejecting or timing out requests',
+    ],
+    rootCause: 'Each server handles 2,500 QPS against a ceiling of 2,000 — 125% utilization. Under M/M/1 queueing theory, any utilization above 100% causes the queue length to grow without bound. With two servers symmetrically over-provisioned and no autoscaling, there is no path to recovery without intervention.',
+    mitigations: [
+      'Horizontal scale: add server instances until aggregate capacity exceeds peak QPS by ≥ 30%',
+      'Autoscaling: configure CPU-based HPA in Kubernetes to scale out before utilization hits 80%',
+      'Request shedding: return HTTP 429 at ~75% utilization to signal backpressure upstream',
+      'Async offloading: push expensive synchronous work into a background queue so the hot path stays lean',
+      'Profiling: identify hot code paths — often a single expensive operation (N+1 query, JSON serialization) drives most CPU usage',
+    ],
+    diagram: {
+      name: 'Server CPU Saturation',
+      description: '5k QPS → LB → 2× servers capped at 2k each — both go critical',
+      nodes: [
+        {
+          id: 'lg1', type: 'loadGenerator', position: { x: 80, y: 250 },
+          data: { kind: 'loadGenerator', label: 'Load Generator', outputQPS: 5000 },
+        },
+        {
+          id: 'lb1', type: 'loadBalancer', position: { x: 320, y: 250 },
+          data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 9000, strategy: 'round-robin', baseLatencyMs: 2 },
+        },
+        {
+          id: 'srv1', type: 'server', position: { x: 570, y: 110 },
+          data: { kind: 'server', label: 'API Server 1', maxQPS: 2000, instances: 1, errorRate: 2, baseLatencyMs: 50 },
+        },
+        {
+          id: 'srv2', type: 'server', position: { x: 570, y: 390 },
+          data: { kind: 'server', label: 'API Server 2', maxQPS: 2000, instances: 1, errorRate: 2, baseLatencyMs: 50 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'lg1', target: 'lb1', ...edgeBase },
+        { id: 'e2', source: 'lb1', target: 'srv1', ...edgeBase },
+        { id: 'e3', source: 'lb1', target: 'srv2', ...edgeBase },
+      ],
+    },
+  },
+  {
+    id: 'database-write-bottleneck',
+    title: 'Database Write Bottleneck',
+    subtitle: 'Heavy write workloads exposing under-provisioned write capacity',
+    component: 'Database',
+    icon: '🗄️',
+    badgeColor: '#8b5cf6',
+    problem: 'An application with an 80% write workload routes 2,000 QPS to a PostgreSQL instance configured with a maxWriteQPS of 400. The read path has comfortable headroom, but the write path faces 1,600 write requests per second against a ceiling of 400 — a 4× overload that causes transaction timeouts and connection pool exhaustion.',
+    symptoms: [
+      'Write latency spikes dramatically while read latency stays stable',
+      'Connection pool exhausted — applications log "too many connections" errors',
+      'Replication lag grows on read replicas as the primary falls behind',
+      'Disk I/O saturation on WAL (Write-Ahead Log) files',
+      'DB CPU high due to lock contention and fsync pressure',
+    ],
+    rootCause: 'The write capacity (maxWriteQPS: 400) is sized for a read-heavy workload assumption that does not match reality. With 80% of 2,000 incoming QPS being writes, the write path faces 1,600 QPS — 4× its limit. Combined total capacity of 1,200 QPS (800 read + 400 write) is half the actual 2,000 QPS load.',
+    mitigations: [
+      'Write queuing: buffer writes in Kafka or SQS, letting the DB consume at its own pace',
+      'Batch writes: consolidate many small writes into fewer large transactions to reduce per-operation overhead',
+      'CQRS: separate write and read models — scale the write store independently from read replicas',
+      'Sharding: partition data horizontally so each shard absorbs a fraction of the write load',
+      'Right-size the instance: upgrade to an instance class with higher IOPS and more write capacity',
+    ],
+    diagram: {
+      name: 'Database Write Bottleneck',
+      description: '2k QPS, 80% writes → DB maxWriteQPS 400 → write path crushed',
+      nodes: [
+        {
+          id: 'lg1', type: 'loadGenerator', position: { x: 80, y: 250 },
+          data: { kind: 'loadGenerator', label: 'Load Generator', outputQPS: 2000 },
+        },
+        {
+          id: 'srv1', type: 'server', position: { x: 360, y: 250 },
+          data: { kind: 'server', label: 'API Server', maxQPS: 3000, instances: 1, errorRate: 1, baseLatencyMs: 40 },
+        },
+        {
+          id: 'db1', type: 'database', position: { x: 650, y: 250 },
+          data: { kind: 'database', label: 'PostgreSQL', dbType: 'postgres', maxReadQPS: 800, maxWriteQPS: 400, readReplicas: 0, readRatio: 20, errorRate: 2, baseLatencyMs: 15 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'lg1', target: 'srv1', ...edgeBase },
+        { id: 'e2', source: 'srv1', target: 'db1', ...edgeBase },
+      ],
+    },
+  },
+  {
+    id: 'cache-miss-storm',
+    title: 'Cache Miss Storm',
+    subtitle: 'A cold or misconfigured cache that exposes the database to full traffic',
+    component: 'Cache',
+    icon: '⚡',
+    badgeColor: '#f59e0b',
+    problem: 'A Redis cache layer sits between the API servers and the database, but its effective hit rate has collapsed to 5% — caused by a cache flush, a cold restart, or a poorly chosen TTL. 95% of 8,000 QPS (7,600 requests/second) falls through to a database provisioned for 1,500 read QPS, causing immediate saturation.',
+    symptoms: [
+      'Database CPU spikes suddenly to 100% following a cache flush or deployment',
+      'p99 read latency jumps from 1 ms (cache) to 15 ms+ (DB) for all users',
+      'Cache hit rate metric drops — visible in Redis INFO stats or CloudWatch',
+      'DB connection pool exhaustion as threads pile up waiting for reads',
+      'Thundering herd: all cache keys expire simultaneously after a mass invalidation',
+    ],
+    rootCause: 'With a 5% cache hit rate, only 400 of 8,000 requests are served by Redis. The remaining 7,600 reach the database, which has a maxReadQPS of 1,500. Combined DB capacity is 1,800 QPS — less than a quarter of the actual load. The cache was providing 95% traffic absorption silently, and its absence is catastrophic.',
+    mitigations: [
+      'Cache warming: pre-populate the cache before going live or after a flush, especially for hot keys',
+      'Staggered TTLs: add jitter to expiry times to prevent synchronized mass expiry (thundering herd)',
+      'Circuit breaker: detect cache miss rate spikes and shed load before the DB saturates',
+      'Read replicas: add database read replicas so that cache misses are absorbed by multiple nodes',
+      'Local in-process cache: add a small L1 cache (Caffeine, node-lru-cache) to absorb hotspot requests even when Redis misses',
+    ],
+    diagram: {
+      name: 'Cache Miss Storm',
+      description: '8k QPS, cache hitRate 5% → 95% falls through to DB (maxReadQPS 1500)',
+      nodes: [
+        {
+          id: 'lg1', type: 'loadGenerator', position: { x: 60, y: 260 },
+          data: { kind: 'loadGenerator', label: 'Load Generator', outputQPS: 8000 },
+        },
+        {
+          id: 'lb1', type: 'loadBalancer', position: { x: 290, y: 260 },
+          data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 12000, strategy: 'round-robin', baseLatencyMs: 2 },
+        },
+        {
+          id: 'srv1', type: 'server', position: { x: 520, y: 120 },
+          data: { kind: 'server', label: 'API Server 1', maxQPS: 5000, instances: 1, errorRate: 1, baseLatencyMs: 40 },
+        },
+        {
+          id: 'srv2', type: 'server', position: { x: 520, y: 400 },
+          data: { kind: 'server', label: 'API Server 2', maxQPS: 5000, instances: 1, errorRate: 1, baseLatencyMs: 40 },
+        },
+        {
+          id: 'cache1', type: 'cache', position: { x: 760, y: 260 },
+          data: { kind: 'cache', label: 'Redis Cache', cacheType: 'redis', hitRate: 5, maxQPS: 50000, baseLatencyMs: 1 },
+        },
+        {
+          id: 'db1', type: 'database', position: { x: 1000, y: 260 },
+          data: { kind: 'database', label: 'PostgreSQL', dbType: 'postgres', maxReadQPS: 1500, maxWriteQPS: 300, readReplicas: 0, readRatio: 95, errorRate: 1, baseLatencyMs: 15 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'lg1',    target: 'lb1',    ...edgeBase },
+        { id: 'e2', source: 'lb1',    target: 'srv1',   ...edgeBase },
+        { id: 'e3', source: 'lb1',    target: 'srv2',   ...edgeBase },
+        { id: 'e4', source: 'srv1',   target: 'cache1', ...edgeBase },
+        { id: 'e5', source: 'srv2',   target: 'cache1', ...edgeBase },
+        { id: 'e6', source: 'cache1', target: 'db1',    ...edgeBase },
+      ],
+    },
+  },
+  {
+    id: 'load-balancer-saturation',
+    title: 'Load Balancer Saturation',
+    subtitle: 'The traffic distributor itself becoming the single point of constraint',
+    component: 'Load Balancer',
+    icon: '⚖️',
+    badgeColor: '#06b6d4',
+    problem: 'A load balancer rated for 6,000 QPS is placed in front of two well-provisioned servers capable of handling the full 10,000 QPS load. Despite having sufficient compute capacity downstream, all traffic is throttled at the ingress tier — the load balancer becomes the sole bottleneck, wasting the server headroom behind it.',
+    symptoms: [
+      'High connection queue depth at the LB while downstream servers are idle',
+      'Uniform latency spike across all endpoints regardless of server load',
+      'LB CPU or connection-table saturation visible in cloud provider metrics',
+      'Error rate rises at the LB (502/504s) while server error rate stays low',
+      'Adding more server instances does not improve performance at all',
+    ],
+    rootCause: 'The load balancer\'s maxQPS ceiling of 6,000 is 60% of actual traffic (10,000 QPS). Unlike server saturation, this bottleneck cannot be resolved by scaling downstream nodes — the constraint sits at the entry point. LB saturation is frequently overlooked because teams focus on server and database metrics.',
+    mitigations: [
+      'Upgrade or scale the load balancer tier: use a higher-capacity SKU or provision multiple LB instances',
+      'DNS-based load balancing: distribute traffic across multiple LBs via weighted DNS or Anycast routing',
+      'Connection keep-alive: reduce LB connection churn by enabling HTTP/2 or persistent TCP connections',
+      'Offload TLS termination: move TLS to dedicated hardware or CDN to free LB capacity for routing',
+      'Layer 4 vs Layer 7: use L4 (TCP) load balancing for high-throughput paths; reserve L7 (HTTP) only where header inspection is required',
+    ],
+    diagram: {
+      name: 'Load Balancer Saturation',
+      description: '10k QPS → LB maxQPS 6k → LB is the bottleneck despite healthy servers',
+      nodes: [
+        {
+          id: 'lg1', type: 'loadGenerator', position: { x: 80, y: 250 },
+          data: { kind: 'loadGenerator', label: 'Load Generator', outputQPS: 10000 },
+        },
+        {
+          id: 'lb1', type: 'loadBalancer', position: { x: 340, y: 250 },
+          data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 6000, strategy: 'round-robin', baseLatencyMs: 2 },
+        },
+        {
+          id: 'srv1', type: 'server', position: { x: 600, y: 110 },
+          data: { kind: 'server', label: 'API Server 1', maxQPS: 8000, instances: 1, errorRate: 1, baseLatencyMs: 50 },
+        },
+        {
+          id: 'srv2', type: 'server', position: { x: 600, y: 390 },
+          data: { kind: 'server', label: 'API Server 2', maxQPS: 8000, instances: 1, errorRate: 1, baseLatencyMs: 50 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'lg1', target: 'lb1',  ...edgeBase },
+        { id: 'e2', source: 'lb1', target: 'srv1', ...edgeBase },
+        { id: 'e3', source: 'lb1', target: 'srv2', ...edgeBase },
+      ],
+    },
+  },
+  {
+    id: 'queue-consumer-lag',
+    title: 'Queue Consumer Lag',
+    subtitle: 'Insufficient consumers unable to drain a high-throughput queue',
+    component: 'Queue',
+    icon: '📨',
+    badgeColor: '#10b981',
+    problem: 'A Kafka queue is receiving 8,000 messages per second, but only 2 consumer instances are running, each capable of processing 2,000 messages/second. Total consumer throughput is 4,000 msg/s — half of the ingestion rate. The queue depth grows at 4,000 msg/s, accumulating hours of backlog within minutes.',
+    symptoms: [
+      'Consumer lag metric grows continuously — visible in Kafka consumer group offsets',
+      'End-to-end processing latency measured from produce to consume increases steadily',
+      'Alert fires on consumer lag threshold (e.g., > 100k messages behind)',
+      'Downstream systems receive stale data as freshness degrades with lag',
+      'Memory pressure on brokers as unread partitions accumulate',
+    ],
+    rootCause: 'Queue capacity is maxThroughput × consumers = 2,000 × 2 = 4,000 QPS. At 8,000 msgs/s ingestion, consumers process only 50% of incoming load. This is not a spike — it is a sustained 2× overload. Each second, 4,000 messages accumulate, and the lag compounds faster than it can be recovered during off-peak hours.',
+    mitigations: [
+      'Scale consumers horizontally: add more consumer instances up to the partition count (e.g., 8 consumers for 8 partitions)',
+      'Increase partition count: more partitions enable more parallel consumers — plan partition count for peak load at deployment',
+      'Consumer batching: process messages in micro-batches to amortize per-message overhead',
+      'Separate fast and slow consumers: use dedicated consumer groups for latency-sensitive vs. bulk processing',
+      'Backpressure from producer: implement producer-side rate limiting if downstream can never catch up',
+    ],
+    diagram: {
+      name: 'Queue Consumer Lag',
+      description: '8k QPS → Queue maxThroughput 2k, 2 consumers → 4k capacity → queue saturated',
+      nodes: [
+        {
+          id: 'lg1', type: 'loadGenerator', position: { x: 80, y: 260 },
+          data: { kind: 'loadGenerator', label: 'Load Generator', outputQPS: 8000 },
+        },
+        {
+          id: 'srv1', type: 'server', position: { x: 340, y: 260 },
+          data: { kind: 'server', label: 'API Server', maxQPS: 10000, instances: 1, errorRate: 1, baseLatencyMs: 30 },
+        },
+        {
+          id: 'q1', type: 'queue', position: { x: 600, y: 260 },
+          data: { kind: 'queue', label: 'Kafka Queue', queueType: 'kafka', maxThroughput: 2000, consumers: 2, baseLatencyMs: 5 },
+        },
+        {
+          id: 'c1', type: 'server', position: { x: 860, y: 140 },
+          data: { kind: 'server', label: 'Consumer 1', maxQPS: 2500, instances: 1, errorRate: 1, baseLatencyMs: 80 },
+        },
+        {
+          id: 'c2', type: 'server', position: { x: 860, y: 380 },
+          data: { kind: 'server', label: 'Consumer 2', maxQPS: 2500, instances: 1, errorRate: 1, baseLatencyMs: 80 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'lg1',  target: 'srv1', ...edgeBase },
+        { id: 'e2', source: 'srv1', target: 'q1',   ...edgeBase },
+        { id: 'e3', source: 'q1',   target: 'c1',   ...edgeBase },
+        { id: 'e4', source: 'q1',   target: 'c2',   ...edgeBase },
+      ],
+    },
+  },
+  {
+    id: 'retry-storm',
+    title: 'Retry Storm',
+    subtitle: 'Aggressive client retries amplifying load on an already-struggling database',
+    component: 'Retry',
+    icon: '🔁',
+    badgeColor: '#ef4444',
+    problem: 'A PostgreSQL database with a 20% error rate (connection timeouts under load) is being hammered by API servers configured with retryCount: 3. Each failed request triggers up to 3 retries, amplifying the effective QPS by 1 + (0.20 × 3) = 1.6×. What starts as 5,000 QPS becomes 8,000 QPS hitting the database, pushing it well past capacity in a reinforcing feedback loop.',
+    symptoms: [
+      'Database QPS in monitoring is significantly higher than expected given client traffic',
+      'Error rate stays elevated even after the initial failure event passes',
+      'CPU and connection count on the database oscillate in a sawtooth pattern as retries cause new failures',
+      'Client-side timeout metrics show high retry counts — often hidden in SDK/HTTP client logs',
+      'Cascading failures: upstream services begin timing out as latency climbs, triggering their own retries',
+    ],
+    rootCause: 'retryCount: 3 with a 20% DB error rate amplifies load by 1.6×: 5,000 base QPS becomes 8,000 effective QPS. DB capacity is (3,000 read + 1,000 write) = 4,000 QPS total — meaning 8,000 QPS pushes utilization to 200%. Retries are not reducing errors; they are causing them. The system is in a positive feedback loop where more retries → more load → more errors → more retries.',
+    mitigations: [
+      'Exponential backoff with jitter: never retry with a fixed interval — use randomized exponential delays to desynchronize clients',
+      'Retry budget: cap total retries per request at the service boundary, not per-hop (e.g., 3 retries total, not 3 per microservice)',
+      'Circuit breaker: stop sending requests (and retries) when error rate exceeds a threshold — fail fast and recover',
+      'Idempotency: ensure operations are safe to retry by design; use idempotency keys for write operations',
+      'Retry only on transient errors: distinguish 503 (retry) from 422 (do not retry) — never retry on non-transient errors',
+    ],
+    diagram: {
+      name: 'Retry Storm',
+      description: 'DB errorRate 20%, retryCount 3 → 1.6× amplification → DB critical',
+      nodes: [
+        {
+          id: 'lg1', type: 'loadGenerator', position: { x: 80, y: 260 },
+          data: { kind: 'loadGenerator', label: 'Load Generator', outputQPS: 5000 },
+        },
+        {
+          id: 'lb1', type: 'loadBalancer', position: { x: 330, y: 260 },
+          data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 8000, strategy: 'round-robin', baseLatencyMs: 2 },
+        },
+        {
+          id: 'srv1', type: 'server', position: { x: 580, y: 120 },
+          data: { kind: 'server', label: 'API Server 1', maxQPS: 3000, instances: 1, errorRate: 2, baseLatencyMs: 45 },
+        },
+        {
+          id: 'srv2', type: 'server', position: { x: 580, y: 400 },
+          data: { kind: 'server', label: 'API Server 2', maxQPS: 3000, instances: 1, errorRate: 2, baseLatencyMs: 45 },
+        },
+        {
+          id: 'db1', type: 'database', position: { x: 840, y: 260 },
+          data: { kind: 'database', label: 'Primary DB', dbType: 'postgres', maxReadQPS: 3000, maxWriteQPS: 1000, readReplicas: 0, readRatio: 70, errorRate: 20, baseLatencyMs: 20 },
+        },
+      ],
+      edges: [
+        { id: 'e1', source: 'lg1',  target: 'lb1',  ...edgeBase },
+        { id: 'e2', source: 'lb1',  target: 'srv1', ...edgeBase },
+        { id: 'e3', source: 'lb1',  target: 'srv2', ...edgeBase },
+        { id: 'e4', source: 'srv1', target: 'db1',  ...edgeBase, data: { distributionMode: 'auto' as const, retryCount: 3 } },
+        { id: 'e5', source: 'srv2', target: 'db1',  ...edgeBase, data: { distributionMode: 'auto' as const, retryCount: 3 } },
+      ],
+    },
+  },
+];
