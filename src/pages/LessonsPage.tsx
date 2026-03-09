@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDiagramStore } from '../store/diagramStore';
 import { LESSONS, type Lesson } from '../data/lessons';
@@ -190,6 +191,12 @@ function LessonCard({ lesson }: { lesson: Lesson }) {
 }
 
 export default function LessonsPage() {
+  useEffect(() => {
+    document.title = 'Architecture Bottleneck Lessons — Learn to Avoid System Bottlenecks | Bottlenecker';
+    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (desc) desc.content = 'Interactive lessons on common system architecture bottlenecks: database overload, cache misses, queue saturation, and more. Learn how to identify and avoid bottlenecks with real diagrams.';
+  }, []);
+
   return (
     <div style={{
       height: '100%',
@@ -213,14 +220,14 @@ export default function LessonsPage() {
           color: '#f1f5f9',
           lineHeight: 1.2,
         }}>
-          Lessons
+          Architecture Bottleneck Lessons
         </h1>
         <p style={{
           margin: '4px 0 0',
           fontSize: 13,
           color: '#64748b',
         }}>
-          Real-world bottleneck scenarios for mid-to-senior engineers — with interactive diagrams you can explore in the Playground.
+          Real-world system bottleneck scenarios — learn how to identify and avoid architecture bottlenecks with interactive diagrams.
         </p>
       </div>
 

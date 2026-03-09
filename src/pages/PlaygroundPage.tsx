@@ -141,7 +141,9 @@ export default function PlaygroundPage() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
   useEffect(() => {
-    document.title = 'Playground — Bottlenecker';
+    document.title = 'Playground — Simulate Architecture Bottlenecks | Bottlenecker';
+    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (desc) desc.content = 'Interactive canvas to simulate system architecture bottlenecks. Add components, set capacities, run load simulations, and identify performance bottlenecks in real time.';
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);

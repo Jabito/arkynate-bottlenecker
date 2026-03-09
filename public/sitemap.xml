@@ -4,18 +4,24 @@
     <loc>https://bottlenecker.arkynate.com/</loc>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
-    <lastmod>2026-03-08</lastmod>
+    <lastmod>2026-03-09</lastmod>
   </url>
   <url>
     <loc>https://bottlenecker.arkynate.com/components</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <lastmod>2026-03-08</lastmod>
+    <lastmod>2026-03-09</lastmod>
   </url>
   <url>
     <loc>https://bottlenecker.arkynate.com/playground</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
-    <lastmod>2026-03-08</lastmod>
+    <lastmod>2026-03-09</lastmod>
+  </url>
+  <url>
+    <loc>https://bottlenecker.arkynate.com/lessons</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-03-09</lastmod>
   </url>
 </urlset>

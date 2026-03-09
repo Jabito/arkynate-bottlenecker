@@ -36,7 +36,9 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = 'Bottlenecker — Free System Architecture Load Simulator';
+    document.title = 'Bottlenecker — Find Architecture Bottlenecks Before They Hit Production';
+    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (desc) desc.content = 'Free visual tool for detecting system architecture bottlenecks. Model servers, databases, caches and queues, simulate load, and see exactly where performance bottlenecks occur — in your browser, no signup needed.';
   }, []);
 
   return (
@@ -76,7 +78,7 @@ export default function HomePage() {
           margin: '0 0 20px',
           maxWidth: 800,
         }}>
-          Find Your System's{' '}
+          Find Your Architecture{' '}
           <span style={{ color: '#22d3ee' }}>Bottleneck</span>
           <br />Before Your Users Do
         </h1>
@@ -87,7 +89,7 @@ export default function HomePage() {
           lineHeight: 1.7,
           margin: '0 0 36px',
         }}>
-          Model your architecture, simulate load, and spot bottlenecks instantly.
+          Model your system architecture, simulate load, and spot performance bottlenecks instantly.
           Add servers, databases, caches, and queues — no code required.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>

@@ -5,27 +5,33 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Bottlenecker — System Architecture Load Simulator</title>
-    <meta name="description" content="Free browser-based tool to model and stress-test your system architecture. Add servers, databases, caches, and queues — then simulate load to find bottlenecks instantly." />
+    <title>Bottlenecker — Find Architecture Bottlenecks Before They Hit Production</title>
+    <meta name="description" content="Free visual tool for detecting system architecture bottlenecks. Model servers, databases, caches and queues, simulate load, and see exactly where performance bottlenecks occur — in your browser, no signup needed." />
+    <meta name="keywords" content="architecture bottleneck, system bottleneck, performance bottleneck, how to find bottlenecks, avoid architecture bottlenecks, system design tool, load testing, distributed system simulator, bottleneck detection, system architecture" />
     <link rel="canonical" href="https://bottlenecker.arkynate.com/" />
 
     <!-- Open Graph -->
     <meta property="og:type"        content="website" />
     <meta property="og:url"         content="https://bottlenecker.arkynate.com/" />
-    <meta property="og:title"       content="Bottlenecker — System Architecture Load Simulator" />
-    <meta property="og:description" content="Model your system, simulate load, find bottlenecks. Free tool by Arkynate Labs." />
+    <meta property="og:title"       content="Bottlenecker — Find Architecture Bottlenecks Before They Hit Production" />
+    <meta property="og:description" content="Free visual tool for detecting system architecture bottlenecks. Model your system, simulate load, spot performance bottlenecks instantly." />
     <meta property="og:site_name"   content="Bottlenecker" />
+    <meta property="og:image"       content="https://bottlenecker.arkynate.com/banner.png" />
+    <meta property="og:image:width"  content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt"    content="Bottlenecker — System Architecture Bottleneck Simulator" />
 
     <!-- Twitter Card -->
-    <meta name="twitter:card"        content="summary" />
-    <meta name="twitter:title"       content="Bottlenecker — System Architecture Load Simulator" />
-    <meta name="twitter:description" content="Model your system, simulate load, find bottlenecks. Free tool by Arkynate Labs." />
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="Bottlenecker — Find Architecture Bottlenecks Before They Hit Production" />
+    <meta name="twitter:description" content="Free visual tool for detecting system architecture bottlenecks. Model your system, simulate load, spot performance bottlenecks instantly." />
+    <meta name="twitter:image"       content="https://bottlenecker.arkynate.com/banner.png" />
 
     <!-- Google AdSense -->
     <meta name="google-adsense-account" content="ca-pub-4792941984956312" />
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4792941984956312" crossorigin="anonymous"></script>
 
-    <!-- JSON-LD structured data -->
+    <!-- JSON-LD: SoftwareApplication -->
     <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -34,9 +40,56 @@
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Web",
   "url": "https://bottlenecker.arkynate.com/",
-  "description": "Browser-based system architecture load simulator. Model servers, databases, caches and queues then find bottlenecks.",
+  "description": "Free browser-based tool for finding architecture bottlenecks and system bottlenecks. Model servers, databases, caches and queues, simulate load, and detect performance bottlenecks instantly.",
+  "keywords": "architecture bottleneck, system bottleneck, performance bottleneck, bottleneck detection, load testing, system design",
+  "softwareVersion": "2.1.0",
+  "screenshot": "https://bottlenecker.arkynate.com/banner.png",
+  "dateModified": "2026-03-09",
+  "featureList": "Visual architecture canvas, Load simulation, Bottleneck detection, Error rate modeling, Latency modeling, Retry amplification simulation",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "author": { "@type": "Organization", "name": "Arkynate Labs" }
+  "author": { "@type": "Organization", "name": "Arkynate Labs", "url": "https://arkynate.com/" }
+}
+    </script>
+
+    <!-- JSON-LD: FAQPage (boosts search snippets for "how to" queries) -->
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is a system architecture bottleneck?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A system architecture bottleneck is any component — server, database, cache, or queue — that receives more traffic than it can handle, causing slowdowns or errors for the entire system. Common examples are database bottlenecks under high read load and single-instance servers with insufficient QPS capacity."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I find bottlenecks in my system architecture?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use Bottlenecker: add your system components (servers, databases, caches, queues) to the canvas, connect them with edges, set their capacity limits and incoming QPS, then click Analyze. Overloaded nodes turn red instantly, showing exactly where your architecture bottleneck is before it reaches production."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can I avoid architecture bottlenecks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Common strategies to avoid architecture bottlenecks include: horizontal scaling (adding server instances), adding database read replicas, introducing a caching layer (Redis/CDN) to offload reads, and using message queues to buffer traffic spikes. Bottlenecker lets you simulate each mitigation visually before implementing it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What causes a database bottleneck?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Database bottlenecks occur when query volume exceeds the database's read or write QPS capacity. Retry storms (where upstream servers retry failed requests) can multiply load significantly. Adding read replicas, caching frequent queries, and separating read/write paths are the most effective fixes."
+      }
+    }
+  ]
 }
     </script>
   </head>
