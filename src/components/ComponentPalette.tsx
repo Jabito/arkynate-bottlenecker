@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { Node } from '@xyflow/react';
 import type { NodeKind, NodeData } from '../types';
 import { useDiagramStore } from '../store/diagramStore';
+import { AdBanner } from './AdBanner';
 
 interface PaletteItem {
   kind: NodeKind;
@@ -104,6 +105,11 @@ export function ComponentPalette() {
       <div style={{ padding: '12px 14px', borderTop: '1px solid #1e2d45', fontSize: 10, color: '#4a5568', lineHeight: 1.5 }}>
         Click to add · Drag onto canvas · Delete to remove
       </div>
+      <AdBanner
+        slot="6844543977"
+        format="rectangle"
+        style={{ width: '100%', background: '#0d1526', borderTop: '1px solid #1e2d45', marginTop: 8 }}
+      />
     </div>
   );
 }

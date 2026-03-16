@@ -229,13 +229,6 @@ export default function PlaygroundPage() {
         height: 'calc(100vh - 50px)',
         overflow: 'hidden',
       }}>
-        <div className="ad-banner-top">
-          <AdBanner
-            slot="6844543977"
-            format="auto"
-            style={{ height: 90, background: '#0d1526', borderBottom: '1px solid #1e2d45' }}
-          />
-        </div>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <ComponentPalette />
           <FlowCanvas />
