@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDiagramStore } from '../store/diagramStore';
 import { analyzeGraph } from '../engine/analyze';
+import { getEventCount } from '../lib/analytics';
 import type { AnalysisResult, NodeStatus } from '../types';
 
 const STATUS_CONFIG: Record<NodeStatus, { icon: string; color: string }> = {
@@ -14,6 +15,12 @@ function formatLatency(ms: number): string {
   if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
   if (ms >= 1)    return `${ms.toFixed(0)}ms`;
   return '< 1ms';
+}
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
 }
 
 function ResultChip({ r }: { r: AnalysisResult }) {
@@ -161,8 +168,11 @@ function StressTestOverlay({ onClose }: { onClose: () => void }) {
 }
 
 export function AnalysisBar() {
-  const { analysisResults, runAnalysis, nodes, edges } = useDiagramStore();
+  const { analysisResults, runAnalysis, nodes, edges, analyzeCount, undo, redo, getShareURL } = useDiagramStore();
   const [showStress, setShowStress] = useState(false);
+  const [globalCount, setGlobalCount] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+
   const hasNodes    = nodes.length > 0;
   const criticalCount = analysisResults.filter(r => r.status === 'critical').length;
   const hasResults  = analysisResults.length > 0;
@@ -170,6 +180,42 @@ export function AnalysisBar() {
   const maxCumulativeLatency = hasResults
     ? Math.max(...analysisResults.map(r => r.cumulativeLatencyMs ?? 0))
     : 0;
+
+  // Fetch global analyze count on mount
+  useEffect(() => {
+    getEventCount('analyze_click').then(setGlobalCount);
+  }, []);
+
+  // Keyboard shortcuts: Cmd/Ctrl+Enter → analyze, Cmd/Ctrl+Z → undo, Cmd/Ctrl+Shift+Z → redo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isTyping =
+        document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement;
+      if (isTyping) return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (hasNodes) runAnalysis();
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [hasNodes, runAnalysis, undo, redo]);
+
+  const handleShare = () => {
+    const url = getShareURL();
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
     <>
@@ -181,6 +227,7 @@ export function AnalysisBar() {
         <button
           onClick={runAnalysis}
           disabled={!hasNodes}
+          title="Analyze (⌘Enter)"
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '6px 14px',
@@ -195,6 +242,21 @@ export function AnalysisBar() {
         >
           ⚡ Analyze
         </button>
+
+        {/* Bottlenecks analyzed chip — shown right after Analyze button */}
+        {globalCount !== null && globalCount > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '4px 10px',
+            background: '#0d1f35',
+            border: '1px solid #1e3a52',
+            borderRadius: 20, fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0,
+            color: '#64748b',
+          }}>
+            <span style={{ color: '#22d3ee', fontWeight: 700 }}>{formatCount(globalCount)}</span>
+            <span>Bottlenecks Analyzed</span>
+          </div>
+        )}
 
         <button
           onClick={() => setShowStress(true)}
@@ -215,7 +277,47 @@ export function AnalysisBar() {
           🧪 Stress Test
         </button>
 
+        <button
+          onClick={handleShare}
+          disabled={!hasNodes}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '6px 12px',
+            background: copied ? '#0f2a1a' : (hasNodes ? '#1a2235' : '#111827'),
+            border: `1px solid ${copied ? '#22c55e' : (hasNodes ? '#1e2d45' : 'transparent')}`,
+            borderRadius: 8,
+            color: copied ? '#22c55e' : (hasNodes ? '#94a3b8' : '#475569'),
+            fontSize: 12, fontWeight: 600,
+            fontFamily: "'Space Grotesk', sans-serif",
+            cursor: hasNodes ? 'pointer' : 'not-allowed',
+            whiteSpace: 'nowrap', flexShrink: 0,
+            transition: 'all 0.2s',
+          }}
+        >
+          {copied ? '✓ Copied' : '🔗 Share'}
+        </button>
+
         <div style={{ width: 1, height: 28, background: '#1e2d45', flexShrink: 0 }} />
+
+        {/* Session stats */}
+        {analyzeCount > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '3px 8px',
+            background: '#0d1f35',
+            border: '1px solid #1e2d45',
+            borderRadius: 12, fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0,
+            color: '#64748b',
+          }}>
+            <span>You've run</span>
+            <span style={{ color: '#94a3b8', fontWeight: 600 }}>{analyzeCount}</span>
+            <span>{analyzeCount === 1 ? 'analysis' : 'analyses'}</span>
+          </div>
+        )}
+
+        {analyzeCount > 0 ? (
+          <div style={{ width: 1, height: 20, background: '#1e2d45', flexShrink: 0 }} />
+        ) : null}
 
         {!hasResults ? (
           <span style={{ fontSize: 11, color: '#475569' }}>

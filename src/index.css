@@ -182,3 +182,14 @@ body {
 .selection-box-hidden .react-flow__selection {
   display: none;
 }
+
+/* ─── Responsive: compact Navbar + AdBanner on laptop screens ── */
+@media (max-width: 1400px) {
+  .navbar-compact { padding: 0 10px !important; gap: 4px !important; }
+  .navbar-diagram-input { width: 120px !important; }
+  .navbar-pg-btn { padding: 4px 8px !important; font-size: 11px !important; }
+  .ad-banner-top { height: 60px !important; }
+}
+@media (max-width: 1280px) {
+  .ad-banner-top { display: none !important; }
+}

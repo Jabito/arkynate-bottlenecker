@@ -14,6 +14,7 @@ import type { NodeTypes, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { useDiagramStore } from '../store/diagramStore';
+import { decodeFromURL } from '../store/diagramStore';
 import type { NodeData, EdgeData } from '../types';
 import { LoadGeneratorNode } from '../nodes/LoadGeneratorNode';
 import { LoadBalancerNode } from '../nodes/LoadBalancerNode';
@@ -138,7 +139,23 @@ function FlowCanvas() {
 
 export default function PlaygroundPage() {
   const navigate = useNavigate();
+  const { importJSON } = useDiagramStore();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    // Load diagram from shareable URL param if present
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get('diagram');
+    if (encoded) {
+      try {
+        const data = decodeFromURL(encoded) as { nodes: unknown[]; edges: unknown[]; name?: string };
+        importJSON(JSON.stringify(data));
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch {
+        // ignore malformed param
+      }
+    }
+  }, [importJSON]);
 
   useEffect(() => {
     document.title = 'Playground — Simulate Architecture Bottlenecks | Bottlenecker';
@@ -204,11 +221,13 @@ export default function PlaygroundPage() {
         height: 'calc(100vh - 50px)',
         overflow: 'hidden',
       }}>
-        <AdBanner
-          slot="6844543977"
-          format="auto"
-          style={{ height: 90, background: '#0d1526', borderBottom: '1px solid #1e2d45' }}
-        />
+        <div className="ad-banner-top">
+          <AdBanner
+            slot="6844543977"
+            format="auto"
+            style={{ height: 90, background: '#0d1526', borderBottom: '1px solid #1e2d45' }}
+          />
+        </div>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <ComponentPalette />
           <FlowCanvas />

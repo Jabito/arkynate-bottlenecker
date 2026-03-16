@@ -1,11 +1,19 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ComponentsPage from './pages/ComponentsPage';
 import PlaygroundPage from './pages/PlaygroundPage';
 import LessonsPage from './pages/LessonsPage';
+import { trackEvent } from './lib/analytics';
 
 export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackEvent('page_view');
+  }, [location.pathname]);
+
   return (
     <div style={{
       display: 'flex',

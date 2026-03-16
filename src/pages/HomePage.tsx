@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AdBanner } from '../components/AdBanner';
+import { getEventCount } from '../lib/analytics';
 
 const STEPS = [
   {
@@ -34,6 +35,11 @@ const FEATURES = [
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const [pageViews, setPageViews] = useState<number | null>(null);
+
+  useEffect(() => {
+    getEventCount('page_view').then(setPageViews);
+  }, []);
 
   useEffect(() => {
     document.title = 'Bottlenecker — Find Architecture Bottlenecks Before They Hit Production';
@@ -329,13 +335,20 @@ export default function HomePage() {
         justifyContent: 'space-between',
         gap: 12,
       }}>
-        <div style={{
-          fontFamily: "'Space Grotesk', sans-serif",
-          fontSize: 13,
-          color: '#64748b',
-        }}>
-          Bottlenecker · by{' '}
-          <span style={{ color: '#94a3b8' }}>Arkynate Labs</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 13,
+            color: '#64748b',
+          }}>
+            Bottlenecker · by{' '}
+            <span style={{ color: '#94a3b8' }}>Arkynate Labs</span>
+          </div>
+          {pageViews !== null && pageViews > 0 && (
+            <div style={{ fontSize: 13, color: '#64748b' }}>
+              👁 {pageViews.toLocaleString()} total visits
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           {[

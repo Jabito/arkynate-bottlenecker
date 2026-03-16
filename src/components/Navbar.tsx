@@ -5,13 +5,14 @@ import { TEMPLATES } from '../data/templates';
 import { ThemePicker } from './ThemePicker';
 
 function NavBtn({
-  children, onClick, title, danger,
-}: { children: React.ReactNode; onClick: () => void; title?: string; danger?: boolean }) {
+  children, onClick, title, danger, className,
+}: { children: React.ReactNode; onClick: () => void; title?: string; danger?: boolean; className?: string }) {
   const [hov, setHov] = useState(false);
   return (
     <button
       onClick={onClick}
       title={title}
+      className={className}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -115,6 +116,7 @@ export function Navbar() {
   return (
     <>
       <div
+        className="navbar-compact"
         style={{
           height: 50,
           background: '#0d1526',
@@ -159,6 +161,7 @@ export function Navbar() {
             <input
               value={diagramName}
               onChange={e => setDiagramName(e.target.value)}
+              className="navbar-diagram-input"
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -183,11 +186,11 @@ export function Navbar() {
         {/* Playground-only actions */}
         {isPlayground && (
           <>
-            <NavBtn onClick={() => { closeAll(); if (confirm('Start a new diagram?')) newDiagram(); }}>New</NavBtn>
+            <NavBtn className="navbar-pg-btn" onClick={() => { closeAll(); if (confirm('Start a new diagram?')) newDiagram(); }}>New</NavBtn>
 
             {/* Templates */}
             <div style={{ position: 'relative' }}>
-              <NavBtn onClick={() => { setShowTemplateMenu(s => !s); setShowSaveMenu(false); setShowLoadMenu(false); }}>
+              <NavBtn className="navbar-pg-btn" onClick={() => { setShowTemplateMenu(s => !s); setShowSaveMenu(false); setShowLoadMenu(false); }}>
                 Templates ▾
               </NavBtn>
               {showTemplateMenu && (
@@ -223,7 +226,7 @@ export function Navbar() {
 
             {/* Save */}
             <div style={{ position: 'relative' }}>
-              <NavBtn onClick={() => { setShowSaveMenu(s => !s); setShowLoadMenu(false); setShowTemplateMenu(false); }}>Save</NavBtn>
+              <NavBtn className="navbar-pg-btn" onClick={() => { setShowSaveMenu(s => !s); setShowLoadMenu(false); setShowTemplateMenu(false); }}>Save</NavBtn>
               {showSaveMenu && (
                 <div style={{
                   position: 'absolute', top: '100%', right: 0, marginTop: 4,
@@ -257,7 +260,7 @@ export function Navbar() {
 
             {/* Load */}
             <div style={{ position: 'relative' }}>
-              <NavBtn onClick={() => { setShowLoadMenu(s => !s); setShowSaveMenu(false); setShowTemplateMenu(false); }}>Load</NavBtn>
+              <NavBtn className="navbar-pg-btn" onClick={() => { setShowLoadMenu(s => !s); setShowSaveMenu(false); setShowTemplateMenu(false); }}>Load</NavBtn>
               {showLoadMenu && (
                 <div style={{
                   position: 'absolute', top: '100%', right: 0, marginTop: 4,
@@ -294,7 +297,7 @@ export function Navbar() {
 
             {/* Export */}
             <div style={{ position: 'relative' }}>
-              <NavBtn onClick={() => { setShowExportMenu(s => !s); setShowSaveMenu(false); setShowLoadMenu(false); setShowTemplateMenu(false); }}>
+              <NavBtn className="navbar-pg-btn" onClick={() => { setShowExportMenu(s => !s); setShowSaveMenu(false); setShowLoadMenu(false); setShowTemplateMenu(false); }}>
                 Export ▾
               </NavBtn>
               {showExportMenu && (
@@ -347,7 +350,7 @@ export function Navbar() {
               )}
             </div>
 
-            <NavBtn onClick={() => fileRef.current?.click()} title="Import JSON only">Import</NavBtn>
+            <NavBtn className="navbar-pg-btn" onClick={() => fileRef.current?.click()} title="Import JSON only">Import</NavBtn>
             <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
 
             <ThemePicker />
