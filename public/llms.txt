@@ -1,0 +1,28 @@
+# Bottlenecker
+
+Bottlenecker is a free, browser-based tool for detecting system architecture bottlenecks
+before they hit production. No signup required.
+
+## What It Does
+- Visual canvas: drag-and-drop servers, databases, caches, and queues
+- Load simulation: set incoming QPS per node, model capacity limits
+- Bottleneck detection: overloaded nodes turn red instantly
+- Error rate & latency modeling: see downstream cascade effects
+- Retry amplification simulation: model thundering herd scenarios
+
+## Who It's For
+Software engineers, system designers, and architects who want to validate their
+architecture under load before writing a single line of code.
+
+## Key Features
+- 100% client-side — no data leaves your browser
+- Free, no account required
+- Supports: servers, databases (read/write split), caches (Redis), queues (Kafka/SQS),
+  load balancers, CDN nodes, load generators
+- Export architecture diagrams as PNG
+
+## URL
+https://bottlenecker.arkynate.com
+
+## Made By
+Arkynate Labs — https://arkynate.com

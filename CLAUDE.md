@@ -47,6 +47,13 @@ pnpm deploy   # requires CF_DISTRIBUTION_ID env var
 
 ---
 
+## SEO Maintenance
+
+- `softwareVersion` in `index.html` JSON-LD must be kept in sync with `package.json` version on every release.
+- `dateModified` in `index.html` JSON-LD must be updated to the release date on every deploy.
+
+---
+
 ## Known Errors & Fixes
 
 - **`useReactFlow must be used inside ReactFlow`**: `@xyflow/react` requires an explicit `ReactFlowProvider` wrapper around any component that calls `useReactFlow()`. Wrap the root layout or the canvas component.

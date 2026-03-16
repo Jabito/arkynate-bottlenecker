@@ -1,3 +1,17 @@
 User-agent: *
 Allow: /
+
+# AI crawlers — explicitly allowed
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
 Sitemap: https://bottlenecker.arkynate.com/sitemap.xml
