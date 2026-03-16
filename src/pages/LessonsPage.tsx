@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDiagramStore } from '../store/diagramStore';
 import { LESSONS, type Lesson } from '../data/lessons';
+import { AdBanner } from '../components/AdBanner';
 
 function Badge({ label, color }: { label: string; color: string }) {
   return (
@@ -230,6 +231,12 @@ export default function LessonsPage() {
           Real-world system bottleneck scenarios — learn how to identify and avoid architecture bottlenecks with interactive diagrams.
         </p>
       </div>
+
+      <AdBanner
+        slot="9084205252"
+        format="rectangle"
+        style={{ background: '#0d1526', borderBottom: '1px solid #1e2d45' }}
+      />
 
       {/* Card grid */}
       <div style={{

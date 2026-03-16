@@ -259,6 +259,12 @@ export default function HomePage() {
         </div>
       </section>
 
+      <AdBanner
+        slot="9246623251"
+        format="rectangle"
+        style={{ background: '#0d1526', borderTop: '1px solid #1e2d45', borderBottom: '1px solid #1e2d45' }}
+      />
+
       {/* Features grid */}
       <section style={{
         maxWidth: 960,
