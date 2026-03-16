@@ -168,7 +168,7 @@ function StressTestOverlay({ onClose }: { onClose: () => void }) {
 }
 
 export function AnalysisBar() {
-  const { analysisResults, runAnalysis, nodes, edges, analyzeCount, undo, redo, getShareURL } = useDiagramStore();
+  const { analysisResults, runAnalysis, nodes, edges, undo, redo, getShareURL } = useDiagramStore();
   const [showStress, setShowStress] = useState(false);
   const [globalCount, setGlobalCount] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
@@ -253,8 +253,8 @@ export function AnalysisBar() {
             borderRadius: 20, fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0,
             color: '#64748b',
           }}>
-            <span style={{ color: '#22d3ee', fontWeight: 700 }}>{formatCount(globalCount)}</span>
-            <span>Bottlenecks Analyzed</span>
+            <span style={{ color: '#22d3ee', fontWeight: 700 }}>🌐 {formatCount(globalCount)}</span>
+            <span>simulations worldwide</span>
           </div>
         )}
 
@@ -298,26 +298,6 @@ export function AnalysisBar() {
         </button>
 
         <div style={{ width: 1, height: 28, background: '#1e2d45', flexShrink: 0 }} />
-
-        {/* Session stats */}
-        {analyzeCount > 0 && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '3px 8px',
-            background: '#0d1f35',
-            border: '1px solid #1e2d45',
-            borderRadius: 12, fontSize: 10, whiteSpace: 'nowrap', flexShrink: 0,
-            color: '#64748b',
-          }}>
-            <span>You've run</span>
-            <span style={{ color: '#94a3b8', fontWeight: 600 }}>{analyzeCount}</span>
-            <span>{analyzeCount === 1 ? 'analysis' : 'analyses'}</span>
-          </div>
-        )}
-
-        {analyzeCount > 0 ? (
-          <div style={{ width: 1, height: 20, background: '#1e2d45', flexShrink: 0 }} />
-        ) : null}
 
         {!hasResults ? (
           <span style={{ fontSize: 11, color: '#475569' }}>

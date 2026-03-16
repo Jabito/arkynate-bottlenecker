@@ -39,13 +39,22 @@ const nodeTypes: NodeTypes = {
 let idCounter = 1;
 
 function FlowCanvas() {
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const {
     nodes, edges,
     onNodesChange, onEdgesChange, onConnect,
     setSelectedNode, setSelectedEdge,
     addNode,
+    diagramName,
   } = useDiagramStore();
+
+  // Re-fit whenever a diagram is loaded (template, import, share URL)
+  useEffect(() => {
+    if (nodes.length === 0) return;
+    const t = setTimeout(() => fitView({ padding: 0.1, duration: 300 }), 50);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diagramName]);
 
   const displayEdges: Edge[] = useMemo(() =>
     edges.map(e => {
@@ -109,7 +118,6 @@ function FlowCanvas() {
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         onPaneClick={handlePaneClick}
-        fitView
         deleteKeyCode={['Delete', 'Backspace']}
         style={{ background: 'var(--bg-base)' }}
         selectionOnDrag

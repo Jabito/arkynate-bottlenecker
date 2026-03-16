@@ -36,9 +36,11 @@ const FEATURES = [
 export default function HomePage() {
   const navigate = useNavigate();
   const [pageViews, setPageViews] = useState<number | null>(null);
+  const [analyzeCount, setAnalyzeCount] = useState<number | null>(null);
 
   useEffect(() => {
     getEventCount('page_view').then(setPageViews);
+    getEventCount('analyze_click').then(setAnalyzeCount);
   }, []);
 
   useEffect(() => {
@@ -147,6 +149,13 @@ export default function HomePage() {
             See Components
           </Link>
         </div>
+        {analyzeCount !== null && analyzeCount > 0 && (
+          <div style={{ fontSize: 13, color: '#64748b', marginTop: 16, textAlign: 'center' }}>
+            ⚡ {analyzeCount >= 1000
+              ? `${(analyzeCount / 1000).toFixed(1)}k`
+              : analyzeCount.toLocaleString()} simulations run worldwide
+          </div>
+        )}
       </section>
 
       {/* Ad */}
@@ -345,9 +354,11 @@ export default function HomePage() {
             <span style={{ color: '#94a3b8' }}>Arkynate Labs</span>
           </div>
           {pageViews !== null && pageViews > 0 && (
-            <div style={{ fontSize: 13, color: '#64748b' }}>
-              👁 {pageViews.toLocaleString()} total visits
-            </div>
+            <span style={{ fontSize: 13, color: '#64748b' }}>
+              · {pageViews >= 1000
+                ? `${(pageViews / 1000).toFixed(1)}k`
+                : pageViews.toLocaleString()} visits since launch
+            </span>
           )}
         </div>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
