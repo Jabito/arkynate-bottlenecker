@@ -183,6 +183,13 @@ body {
   display: none;
 }
 
+/* Default: clamp top ad banner to 90px regardless of AdSense content */
+.ad-banner-top {
+  height: 90px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
 /* ─── Responsive: compact Navbar + AdBanner on laptop screens ── */
 @media (max-width: 1400px) {
   .navbar-compact { padding: 0 10px !important; gap: 4px !important; }

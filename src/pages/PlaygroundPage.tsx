@@ -244,7 +244,7 @@ export default function PlaygroundPage() {
         <AdBanner
           slot="1205058699"
           format="horizontal"
-          style={{ height: 90, background: '#0d1526', borderTop: '1px solid #1e2d45' }}
+          style={{ height: 90, flexShrink: 0, background: '#0d1526', borderTop: '1px solid #1e2d45' }}
         />
         <AnalysisBar />
       </div>
