@@ -1,5 +1,9 @@
 # Bottlenecker
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
+
 **Browser-based system architecture load simulator by [Arkynate Labs](https://labs.arkynate.com).**
 
 Model your system with visual nodes, wire them together, simulate traffic, and find bottlenecks — all in the browser with no backend required.
@@ -35,9 +39,11 @@ Live at: **https://bottlenecker.arkynate.com**
 - Zustand — diagram state
 - Vite + TailwindCSS v4
 
-## Local Development
+## Getting Started
 
 ```bash
+git clone https://github.com/Jabito/arkynate-bottlenecker.git
+cd arkynate-bottlenecker
 npm install
 npm run dev
 ```
@@ -63,15 +69,17 @@ k8s/
     dev/      — dev image tag + host overrides
 ```
 
-## Ad Slots
+## Contributing
 
-Three AdSense placements are wired up with placeholder slot IDs. Replace them with real unit IDs after creating ad units in Google AdSense (`ca-pub-4792941984956312`):
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a PR.
 
-| Placeholder | Location |
-|-------------|----------|
-| `TODO_SLOT_ID_NAVBAR` | Horizontal banner below the navbar |
-| `TODO_SLOT_ID_BOTTOM` | Horizontal banner above the analysis bar |
-| `TODO_SLOT_ID_SIDEBAR` | Rectangle in the config panel empty state |
+## Security
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md). Please do not open public issues for security concerns.
+
+## License
+
+[MIT](LICENSE)
 
 ---
 
