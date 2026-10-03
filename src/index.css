@@ -6,6 +6,7 @@
   --bg-base: #0a0f1e;
   --bg-surface: #111827;
   --bg-elevated: #1a2235;
+  --bg-nav: #0d1526;
   --border: #1e2d45;
   --cyan: #22d3ee;
   --purple: #a855f7;
@@ -19,6 +20,8 @@
   --text-muted: #94a3b8;
   --text-dim: #64748b;
   --accent: var(--cyan);
+  --accent-strong: #0891b2;
+  --on-accent: #ffffff;
   --st-healthy: #22c55e;
   --st-warning: #eab308;
   --st-near: #f97316;
@@ -28,17 +31,22 @@
   --edge-label-bg: #111827;
   --edge-label-fg: #e2e8f0;
   --overlay: rgba(2, 6, 23, 0.72);
+  --shadow: rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 
-/* ─── Themes ────────────────────────────────────────────────── */
+/* ─── Themes ──────────────────────────────────────────────────
+   The theme class is applied to <body> on /playground only (see Navbar);
+   Home, Components, Lessons and Privacy always render with the dark tokens. */
 
 body.theme-light {
   --bg-base: #f8fafc;
   --bg-surface: #ffffff;
   --bg-elevated: #f1f5f9;
-  --border: #e2e8f0;
+  --bg-nav: #ffffff;
+  --border: #d5dde8;
   --cyan: #0891b2;
   --purple: #7c3aed;
   --green: #16a34a;
@@ -49,6 +57,8 @@ body.theme-light {
   --text-strong: #0f172a;
   --text-muted: #475569;
   --text-dim: #64748b;
+  --accent-strong: #0891b2;
+  --on-accent: #ffffff;
   --st-healthy: #16a34a;
   --st-warning: #ca8a04;
   --st-near: #ea580c;
@@ -58,25 +68,29 @@ body.theme-light {
   --edge-label-bg: #ffffff;
   --edge-label-fg: #0f172a;
   --overlay: rgba(15, 23, 42, 0.45);
-  color: #0f172a;
+  --shadow: rgba(15, 23, 42, 0.10);
+  color-scheme: light;
 }
 
 body.theme-matrix {
   --bg-base: #000000;
   --bg-surface: #001400;
   --bg-elevated: #002800;
+  --bg-nav: #000a00;
   --border: #005200;
   --cyan: #00ff41;
   --purple: #00cc33;
   --green: #00ff41;
-  --yellow: #aaff00;
-  --orange: #88ff00;
+  /* warm hues stay warm so stressed nodes never read as healthy (#18) */
+  --yellow: #ffd400;
+  --orange: #ff8c00;
   --red: #ff0044;
   --text: #b6ffc6;
   --text-strong: #e6ffe9;
   --text-muted: #5fd37a;
-  --text-dim: #2f8f45;
-  /* status keeps distinct hues so stressed nodes never read as healthy */
+  --text-dim: #3fa85a;
+  --accent-strong: #00b32d;
+  --on-accent: #000000;
   --st-healthy: #00ff41;
   --st-warning: #ffd400;
   --st-near: #ff8c00;
@@ -86,6 +100,7 @@ body.theme-matrix {
   --edge-label-bg: #001400;
   --edge-label-fg: #b6ffc6;
   --overlay: rgba(0, 0, 0, 0.75);
+  --shadow: rgba(0, 0, 0, 0.6);
 }
 
 body.theme-matrix .bn-node-title,
@@ -99,15 +114,47 @@ body.theme-matrix .bn-stat {
 body {
   margin: 0;
   background: var(--bg-base);
-  color: #e2e8f0;
+  color: var(--text);
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
 }
 
-/* React Flow overrides */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Prose lists (Tailwind preflight strips list markers) */
+.bn-list { list-style: disc; }
+.bn-list li::marker { color: var(--text-dim); }
+
+/* React Flow theming — set xyflow's own variables so its stylesheet
+   (imported after this one) picks them up regardless of order (#91). */
+.react-flow {
+  --xy-background-color: var(--bg-base);
+  --xy-edge-stroke: var(--edge);
+  --xy-edge-stroke-selected: var(--edge-selected);
+  --xy-edge-label-background-color: var(--edge-label-bg);
+  --xy-edge-label-color: var(--edge-label-fg);
+  --xy-connectionline-stroke: var(--edge);
+  --xy-controls-button-background-color: var(--bg-surface);
+  --xy-controls-button-background-color-hover: var(--bg-elevated);
+  --xy-controls-button-color: var(--text-muted);
+  --xy-controls-button-color-hover: var(--accent);
+  --xy-controls-button-border-color: var(--border);
+  --xy-controls-box-shadow: 0 2px 8px var(--shadow);
+  --xy-minimap-background-color: var(--bg-surface);
+  --xy-minimap-mask-background-color: var(--overlay);
+  --xy-selection-background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  --xy-selection-border: 1px solid var(--accent);
+}
 .react-flow__background { background: var(--bg-base); }
-.react-flow__edge-path { stroke-width: 2; }
-.react-flow__edge.selected .react-flow__edge-path { stroke: var(--cyan) !important; }
+
+/* Edges: !important beats the inline stroke saved in older diagrams/templates */
+.react-flow__edge-path { stroke: var(--edge) !important; stroke-width: 2; }
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke: var(--edge-selected) !important;
+  stroke-width: 3;
+}
+.react-flow__connection-path { stroke: var(--edge); }
 
 .react-flow__handle {
   width: 14px;
@@ -125,28 +172,35 @@ body {
 }
 .react-flow__handle:hover,
 .react-flow__handle.connectingto {
-  background: var(--cyan);
-  border-color: var(--cyan);
-  box-shadow: 0 0 8px var(--cyan);
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
 }
 
-.react-flow__controls {
+.react-flow .react-flow__controls {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
-.react-flow__controls-button {
+.react-flow .react-flow__controls-button {
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  fill: #94a3b8;
+  color: var(--text-muted);
+  fill: var(--text-muted);
 }
-.react-flow__controls-button:hover { background: var(--bg-elevated); fill: var(--cyan); }
+.react-flow .react-flow__controls-button svg { fill: currentColor; }
+.react-flow .react-flow__controls-button:hover {
+  background: var(--bg-elevated);
+  color: var(--accent);
+  fill: var(--accent);
+}
 
-.react-flow__minimap {
+.react-flow .react-flow__minimap {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
+  overflow: hidden;
 }
 
 /* Node base */
@@ -155,18 +209,30 @@ body {
   border-radius: 10px;
   border: 1.5px solid var(--border);
   background: var(--bg-surface);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  color: var(--text);
+  box-shadow: 0 4px 24px var(--shadow);
+  transition: border-color 0.2s, box-shadow 0.2s, outline-color 0.2s;
   cursor: grab;
 }
 .bn-node:active { cursor: grabbing; }
-.bn-node.selected, .bn-node:hover {
-  border-color: var(--cyan);
-  box-shadow: 0 0 0 1px var(--cyan), 0 4px 24px rgba(0,0,0,0.5);
+.bn-node:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 24px var(--shadow);
 }
-.bn-node.status-warning  { border-color: var(--yellow); box-shadow: 0 0 0 1px var(--yellow), 0 4px 24px rgba(0,0,0,0.4); }
-.bn-node.status-near     { border-color: var(--orange); box-shadow: 0 0 0 1px var(--orange), 0 4px 24px rgba(0,0,0,0.4); }
-.bn-node.status-critical { border-color: var(--red);    box-shadow: 0 0 0 1px var(--red), 0 4px 24px rgba(0,0,0,0.4), 0 0 20px rgba(239,68,68,0.25); }
+.bn-node.status-warning  { border-color: var(--st-warning);  box-shadow: 0 0 0 1px var(--st-warning),  0 4px 24px var(--shadow); }
+.bn-node.status-near     { border-color: var(--st-near);     box-shadow: 0 0 0 1px var(--st-near),     0 4px 24px var(--shadow); }
+.bn-node.status-critical {
+  border-color: var(--st-critical);
+  box-shadow: 0 0 0 1px var(--st-critical), 0 4px 24px var(--shadow), 0 0 20px color-mix(in srgb, var(--st-critical) 25%, transparent);
+}
+/* Selection ring sits outside the status border, so both stay visible (#46) */
+.bn-node.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.bn-node.selected:not(.status-warning):not(.status-near):not(.status-critical) {
+  border-color: var(--accent);
+}
 
 .bn-node-header {
   display: flex;
@@ -180,13 +246,13 @@ body {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-strong);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.bn-node-type { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.bn-node-type { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
 
 .bn-node-body { padding: 8px 12px 10px; }
 
@@ -195,39 +261,172 @@ body {
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--text-muted);
   margin-bottom: 2px;
 }
-.bn-stat span:last-child { color: #e2e8f0; font-weight: 500; }
+.bn-stat span:last-child { color: var(--text); font-weight: 500; }
 
 .bn-meter { height: 4px; background: var(--bg-elevated); border-radius: 2px; margin-top: 6px; overflow: hidden; }
 .bn-meter-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background-color 0.3s; }
 
-/* Edge labels */
+/* Edge labels — token colours, so exported PNG/JPG keep readable labels (#22) */
 .react-flow__edge-text {
-  fill: #94a3b8 !important;
+  fill: var(--edge-label-fg) !important;
   font-size: 10px;
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 600;
 }
-.react-flow__edge-textbg { fill: #111827 !important; }
+.react-flow__edge-textbg {
+  fill: var(--edge-label-bg) !important;
+  stroke: var(--border);
+  stroke-width: 1;
+}
 
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .react-flow__selection {
-  background: rgba(34, 211, 238, 0.08);
-  border: 1px solid var(--cyan);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid var(--accent);
 }
 
 .selection-box-hidden .react-flow__selection {
   display: none;
 }
 
-/* ─── Responsive: compact Navbar on laptop screens ── */
-@media (max-width: 1400px) {
-  .navbar-compact { padding: 0 10px !important; gap: 4px !important; }
-  .navbar-diagram-input { width: 120px !important; }
-  .navbar-pg-btn { padding: 4px 8px !important; font-size: 11px !important; }
+/* ─── Navbar ──────────────────────────────────────────────── */
+.bn-navbtn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.bn-navbtn:hover, .bn-navbtn[aria-expanded="true"] {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text);
+}
+.bn-navbtn:disabled { opacity: 0.6; cursor: progress; }
+
+.bn-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  z-index: 50;
+  box-shadow: 0 8px 32px var(--shadow);
+  color: var(--text);
+}
+.bn-menu-label { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; padding: 0 4px; }
+.bn-menuitem {
+  width: 100%;
+  display: block;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: background 0.1s;
+}
+.bn-menuitem:hover, .bn-menuitem:focus-visible { background: var(--bg-elevated); }
+.bn-menuitem-sub { font-size: 10px; color: var(--text-dim); font-family: 'Inter', sans-serif; margin-top: 2px; }
+.bn-menu-sep { border-top: 1px solid var(--border); margin: 6px 0; }
+
+.bn-input {
+  width: 100%;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+.bn-input:focus { border-color: var(--accent); }
+
+.bn-btn-primary {
+  background: var(--accent-strong);
+  border: none;
+  border-radius: 6px;
+  color: var(--on-accent);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bn-btn-primary:hover { filter: brightness(1.1); }
+.bn-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.bn-btn-ghost:hover { color: var(--text); background: var(--bg-elevated); }
+.bn-btn-danger {
+  background: color-mix(in srgb, var(--st-critical) 15%, transparent);
+  border: 1px solid var(--st-critical);
+  border-radius: 6px;
+  color: var(--st-critical);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bn-diagram-name {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  padding: 2px 4px;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  flex: 0 1 200px;
+  min-width: 80px;
+  text-overflow: ellipsis;
+}
+.bn-diagram-name:focus { border-bottom-color: var(--accent); }
+
+@keyframes bn-spin { to { transform: rotate(360deg); } }
+.bn-spinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: bn-spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+/* Generic link hover used by Home/Lessons/Privacy */
+.bn-link { color: var(--text-dim); text-decoration: none; transition: color 0.15s; }
+.bn-link:hover { color: var(--text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bn-spinner { animation-duration: 2.4s; }
 }
