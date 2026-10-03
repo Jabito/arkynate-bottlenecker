@@ -1,7 +1,34 @@
 import type { Template } from './templates';
+import type { EdgeData } from '../types';
 
 // Edge colour comes from the theme tokens (--edge), so no inline stroke here.
 const edgeBase = { animated: true, data: { distributionMode: 'auto' as const } };
+
+/**
+ * A condition on the live analysis, evaluated by `src/lib/lessonChecks.ts` after every auto-analysis.
+ * `below` needs the node to exist and carry traffic, so deleting the bottleneck never passes.
+ */
+export type LessonCondition =
+  | { kind: 'below'; nodeId: string; pct: number; metric?: 'utilization' | 'readUtilization' | 'writeUtilization' }
+  | { kind: 'noCritical' }
+  | { kind: 'successAtLeast'; pct: number }
+  | { kind: 'loadAtLeast'; qps: number };
+
+export interface LessonStep {
+  text: string;
+  /** Ticks the step when it holds. Observation steps have none. */
+  check?: LessonCondition;
+}
+
+export interface LessonCheck {
+  label: string;
+  when: LessonCondition;
+}
+
+/** One config change of the documented fix. Tests apply these; the steps describe them. */
+export type LessonPatch =
+  | { nodeId: string; data: Record<string, unknown> }
+  | { edgeId: string; data: Partial<EdgeData> };
 
 export interface Lesson {
   id: string;
@@ -14,6 +41,13 @@ export interface Lesson {
   symptoms: string[];
   rootCause: string;
   mitigations: string[];
+  /** "Why this breaks", shown at the top of the playground lesson panel. */
+  goal: string;
+  /** 2–4 things the learner does in the playground. */
+  steps: LessonStep[];
+  /** All must hold for the lesson to be complete. False on `diagram`, true once `solution` is applied. */
+  checks: LessonCheck[];
+  solution: LessonPatch[];
   diagram: Template;
 }
 
@@ -40,6 +74,22 @@ export const LESSONS: Lesson[] = [
       'Request shedding: return HTTP 429 at ~75% utilization to signal backpressure upstream',
       'Async offloading: push expensive synchronous work into a background queue so the hot path stays lean',
       'Profiling: identify hot code paths — often a single expensive operation (N+1 query, JSON serialization) drives most CPU usage',
+    ],
+    goal: 'Both API servers get 2,500 QPS against a 2,000 QPS ceiling (125%). Each sheds 500 requests a second, 21.6% of requests fail and latency is unbounded. Add capacity without dropping any traffic.',
+    steps: [
+      { text: 'Click API Server 1 and set Instances to 2.', check: { kind: 'below', nodeId: 'srv1', pct: 100 } },
+      { text: 'Do the same for API Server 2.', check: { kind: 'below', nodeId: 'srv2', pct: 100 } },
+      { text: 'Watch the bar: success climbs from 78.4% to 98% and latency is finite again.' },
+    ],
+    checks: [
+      { label: 'API Server 1 below 100%', when: { kind: 'below', nodeId: 'srv1', pct: 100 } },
+      { label: 'API Server 2 below 100%', when: { kind: 'below', nodeId: 'srv2', pct: 100 } },
+      { label: 'Success rate ≥ 97%', when: { kind: 'successAtLeast', pct: 97 } },
+      { label: 'Still sending the full 5,000 QPS', when: { kind: 'loadAtLeast', qps: 5000 } },
+    ],
+    solution: [
+      { nodeId: 'srv1', data: { instances: 2 } },
+      { nodeId: 'srv2', data: { instances: 2 } },
     ],
     diagram: {
       name: 'Server CPU Saturation',
@@ -92,6 +142,18 @@ export const LESSONS: Lesson[] = [
       'Sharding: partition data horizontally so each shard absorbs a fraction of the write load',
       'Right-size the instance: upgrade to an instance class with higher IOPS and more write capacity',
     ],
+    goal: '80% of 2,000 QPS are writes: 1,600 writes/s hit a primary that takes 400. The write path runs at 400% while reads sit at 50%. Fix the write path, not the reads.',
+    steps: [
+      { text: 'Click PostgreSQL. Its card shows the write path at 400% and the read path at 50%.' },
+      { text: 'Try Read replicas: 3. The write path does not move, because replicas only add read capacity.' },
+      { text: 'Raise Max write QPS (primary) to 2,000: the capacity that batching, sharding or a bigger instance buys.', check: { kind: 'below', nodeId: 'db1', metric: 'writeUtilization', pct: 100 } },
+    ],
+    checks: [
+      { label: 'PostgreSQL write path below 100%', when: { kind: 'below', nodeId: 'db1', metric: 'writeUtilization', pct: 100 } },
+      { label: 'No critical components', when: { kind: 'noCritical' } },
+      { label: 'Still sending the full 2,000 QPS', when: { kind: 'loadAtLeast', qps: 2000 } },
+    ],
+    solution: [{ nodeId: 'db1', data: { maxWriteQPS: 2000 } }],
     diagram: {
       name: 'Database Write Bottleneck',
       description: '2k QPS, 80% writes → DB maxWriteQPS 400 → write path crushed',
@@ -138,6 +200,18 @@ export const LESSONS: Lesson[] = [
       'Read replicas: add database read replicas so that cache misses are absorbed by multiple nodes — 4 replicas cover the 7,220 reads/s, but the 380 writes/s still overload the primary',
       'Local in-process cache: add a small L1 cache (Caffeine, node-lru-cache) to absorb hotspot requests even when Redis misses',
     ],
+    goal: 'The cache hit rate collapsed to 5%, so 7,600 of 8,000 requests fall through to PostgreSQL: reads at 481%, writes at 127%. Get the database back under its limits.',
+    steps: [
+      { text: 'Click PostgreSQL and read its card: reads 481%, writes 127%.' },
+      { text: 'Try Read replicas: 4. Reads drop below 100%, but the writes still overload the primary.', check: { kind: 'below', nodeId: 'db1', metric: 'readUtilization', pct: 100 } },
+      { text: 'Warm the cache: click Redis Cache and set Hit rate to 95%.', check: { kind: 'below', nodeId: 'db1', pct: 100 } },
+    ],
+    checks: [
+      { label: 'PostgreSQL below 100%', when: { kind: 'below', nodeId: 'db1', pct: 100 } },
+      { label: 'No critical components', when: { kind: 'noCritical' } },
+      { label: 'Still sending the full 8,000 QPS', when: { kind: 'loadAtLeast', qps: 8000 } },
+    ],
+    solution: [{ nodeId: 'cache1', data: { hitRate: 95 } }],
     diagram: {
       name: 'Cache Miss Storm',
       description: '8k QPS, cache hitRate 5% → 95% falls through to DB (maxReadQPS 1500)',
@@ -200,6 +274,18 @@ export const LESSONS: Lesson[] = [
       'Offload TLS termination: move TLS to dedicated hardware or CDN to free LB capacity for routing',
       'Layer 4 vs Layer 7: use L4 (TCP) load balancing for high-throughput paths; reserve L7 (HTTP) only where header inspection is required',
     ],
+    goal: 'A load balancer rated for 6,000 QPS receives 10,000. It runs at 167% and sheds 40% of requests, while the servers behind it idle at 37.5%.',
+    steps: [
+      { text: 'Click API Server 1 and set Instances to 4. Nothing improves: the servers were never the problem.' },
+      { text: 'Click the Load Balancer and raise Max QPS to 12,000.', check: { kind: 'below', nodeId: 'lb1', pct: 100 } },
+    ],
+    checks: [
+      { label: 'Load balancer below 100%', when: { kind: 'below', nodeId: 'lb1', pct: 100 } },
+      { label: 'No critical components', when: { kind: 'noCritical' } },
+      { label: 'Success rate ≥ 98%', when: { kind: 'successAtLeast', pct: 98 } },
+      { label: 'Still sending the full 10,000 QPS', when: { kind: 'loadAtLeast', qps: 10000 } },
+    ],
+    solution: [{ nodeId: 'lb1', data: { maxQPS: 12000 } }],
     diagram: {
       name: 'Load Balancer Saturation',
       description: '10k QPS → LB maxQPS 6k → LB is the bottleneck despite healthy servers',
@@ -250,6 +336,21 @@ export const LESSONS: Lesson[] = [
       'Consumer batching: process messages in micro-batches to amortize per-message overhead',
       'Separate fast and slow consumers: use dedicated consumer groups for latency-sensitive vs. bulk processing',
       'Backpressure from producer: implement producer-side rate limiting if downstream can never catch up',
+    ],
+    goal: '2 consumers × 2,000 msg/s drain 4,000 msg/s, but 8,000 arrive. The queue runs at 200% and the backlog grows by 4,000 messages every second.',
+    steps: [
+      { text: 'Click Kafka Queue and set Consumers to 5 (a drain rate of 10,000 msg/s).', check: { kind: 'below', nodeId: 'q1', pct: 100 } },
+      { text: 'The consumer servers now get 4,000 msg/s each against 2,500. Set Instances to 2 on Consumer 1 and Consumer 2.', check: { kind: 'noCritical' } },
+    ],
+    checks: [
+      { label: 'Kafka Queue drains faster than it fills (below 100%)', when: { kind: 'below', nodeId: 'q1', pct: 100 } },
+      { label: 'No critical components, consumers included', when: { kind: 'noCritical' } },
+      { label: 'Still sending the full 8,000 msg/s', when: { kind: 'loadAtLeast', qps: 8000 } },
+    ],
+    solution: [
+      { nodeId: 'q1', data: { consumers: 5 } },
+      { nodeId: 'c1', data: { instances: 2 } },
+      { nodeId: 'c2', data: { instances: 2 } },
     ],
     diagram: {
       name: 'Queue Consumer Lag',
@@ -306,6 +407,23 @@ export const LESSONS: Lesson[] = [
       'Circuit breaker: stop sending requests (and retries) when error rate exceeds a threshold — fail fast and recover',
       'Idempotency: ensure operations are safe to retry by design; use idempotency keys for write operations',
       'Retry only on transient errors: distinguish 503 (retry) from 422 (do not retry) — never retry on non-transient errors',
+    ],
+    goal: 'Each failed database call is retried up to 3 times. The extra load raises the error rate, which triggers more retries, until the database settles at 200%.',
+    steps: [
+      { text: 'Click the API Server 1 → Primary DB connection and set Retries on error to 0. Do the same for API Server 2. The database drops to 92%.', check: { kind: 'below', nodeId: 'db1', pct: 100 } },
+      { text: 'Notice the success rate falls to 78.4%: the retries were hiding the database\'s 20% error rate.' },
+      { text: 'Fix the root cause: click Primary DB and set Error rate to 2%.', check: { kind: 'successAtLeast', pct: 95 } },
+    ],
+    checks: [
+      { label: 'Primary DB below 100%', when: { kind: 'below', nodeId: 'db1', pct: 100 } },
+      { label: 'No critical components', when: { kind: 'noCritical' } },
+      { label: 'Success rate ≥ 95%', when: { kind: 'successAtLeast', pct: 95 } },
+      { label: 'Still sending the full 5,000 QPS', when: { kind: 'loadAtLeast', qps: 5000 } },
+    ],
+    solution: [
+      { edgeId: 'e4', data: { retryCount: 0 } },
+      { edgeId: 'e5', data: { retryCount: 0 } },
+      { nodeId: 'db1', data: { errorRate: 2 } },
     ],
     diagram: {
       name: 'Retry Storm',
