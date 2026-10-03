@@ -94,7 +94,7 @@ export function NodeBase({
         )}
         {latency != null && (c.actualQPS ?? 0) > 0 && latency > 0 && (
           <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }} title="Mean latency at this node (M/M/1)">
-            ~{Number.isFinite(latency) ? formatLatency(latency) : '∞ (saturated)'}
+            {Number.isFinite(latency) ? `~${formatLatency(latency)}` : '∞ (saturated)'}
           </div>
         )}
       </div>
