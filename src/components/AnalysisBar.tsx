@@ -185,7 +185,7 @@ function ShortcutsPopover() {
 function StatusLegend({ vertical = false }: { vertical?: boolean }) {
   return (
     <ul aria-label="Status legend (utilisation)" style={{
-      display: 'flex', flexDirection: vertical ? 'column' : 'row', gap: vertical ? 4 : 8,
+      display: 'flex', flexDirection: vertical ? 'column' : 'row', gap: vertical ? 4 : 6,
       listStyle: 'none', padding: 0, margin: 0, fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'nowrap',
     }}>
       {STATUS_LEGEND.map(({ status, range }) => (
@@ -423,7 +423,7 @@ export function AnalysisBar() {
         role="region"
         aria-label="Analysis"
         style={{
-          height: 52, background: 'var(--bg-surface)', borderTop: '1px solid var(--border)',
+          height: 48, background: 'var(--bg-surface)', borderTop: '1px solid var(--border)', flexShrink: 0,
           display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', position: 'relative',
         }}
       >
@@ -444,8 +444,8 @@ export function AnalysisBar() {
           ⚡ Analyze
         </button>
 
-        <button type="button" onClick={undo} disabled={!canUndo} title={`Undo (${MOD} Z)`} aria-label="Undo" style={{ ...barButton(canUndo), padding: '6px 9px' }}>↶</button>
-        <button type="button" onClick={redo} disabled={!canRedo} title={`Redo (${MOD} ⇧ Z)`} aria-label="Redo" style={{ ...barButton(canRedo), padding: '6px 9px' }}>↷</button>
+        <button type="button" onClick={undo} disabled={!canUndo} title={`Undo (${MOD} Z)`} aria-label="Undo" style={{ ...barButton(canUndo), padding: '4px 9px', fontSize: 15 }}>↶</button>
+        <button type="button" onClick={redo} disabled={!canRedo} title={`Redo (${MOD} ⇧ Z)`} aria-label="Redo" style={{ ...barButton(canRedo), padding: '4px 9px', fontSize: 15 }}>↷</button>
 
         {globalCount !== null && globalCount > 0 && (
           <div style={{
@@ -485,7 +485,7 @@ export function AnalysisBar() {
               : 'Add components to the canvas, or start from a template'}
           </span>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden', flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
             <div aria-live="polite" style={{ fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
               color: counts.critical > 0 ? 'var(--st-critical)' : 'var(--st-healthy)' }}>
               {counts.critical > 0
@@ -495,26 +495,6 @@ export function AnalysisBar() {
                 <span style={{ color: 'var(--st-warning)', fontWeight: 600 }}> · {counts.stressed} warning{counts.stressed !== 1 ? 's' : ''}</span>
               )}
             </div>
-
-            {latency != null && (
-              <>
-                <Divider />
-                <div style={{ fontFamily: FONT_HEAD, fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', flexShrink: 0 }}
-                  title="Mean request latency (M/M/1), weighted by traffic along the synchronous path">
-                  Est. latency (mean):{' '}
-                  {Number.isFinite(latency)
-                    ? <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{formatLatency(latency)}</span>
-                    : <span style={{ color: 'var(--st-critical)', fontWeight: 600 }}>∞ / saturated</span>}
-                </div>
-                <div style={{ fontFamily: FONT_HEAD, fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', flexShrink: 0 }}
-                  title="Share of generated requests that complete successfully end to end">
-                  Success:{' '}
-                  <span style={{ fontWeight: 600, color: meta.successRatePct >= 99 ? 'var(--text-muted)' : meta.successRatePct >= 90 ? 'var(--st-warning)' : 'var(--st-critical)' }}>
-                    {successText(meta.successRatePct)}%
-                  </span>
-                </div>
-              </>
-            )}
 
             <div ref={detailsRef} style={{ position: 'relative', flexShrink: 0 }}>
               <button
@@ -529,15 +509,28 @@ export function AnalysisBar() {
               </button>
               {popover === 'details' && <DetailsPopover meta={meta} onSelect={selectNode} />}
             </div>
+            {latency != null && (
+              <>
+                <Divider />
+                <div style={{ fontFamily: FONT_HEAD, fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', flexShrink: 0 }}
+                  title="Estimated mean request latency (M/M/1), weighted by traffic along the synchronous request path">
+                  Mean latency{' '}
+                  {Number.isFinite(latency)
+                    ? <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{formatLatency(latency)}</span>
+                    : <span style={{ color: 'var(--st-critical)', fontWeight: 600 }}>∞ saturated</span>}
+                </div>
+                <div style={{ fontFamily: FONT_HEAD, fontSize: 11, color: 'var(--text-dim)', whiteSpace: 'nowrap', flexShrink: 0 }}
+                  title="Share of generated requests that complete successfully end to end">
+                  Success{' '}
+                  <span style={{ fontWeight: 600, color: meta.successRatePct >= 99 ? 'var(--text-muted)' : meta.successRatePct >= 90 ? 'var(--st-warning)' : 'var(--st-critical)' }}>
+                    {successText(meta.successRatePct)}%
+                  </span>
+                </div>
+              </>
+            )}
 
-            <Divider />
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', alignItems: 'center', minWidth: 0 }} className="scrollbar-thin">
-              {analysisResults.map(r => <ResultChip key={r.nodeId} r={r} onSelect={selectNode} />)}
-            </div>
           </div>
         )}
-
-        <div style={{ flexShrink: 0 }}><StatusLegend /></div>
 
         <div ref={helpRef} style={{ position: 'relative', flexShrink: 0 }}>
           <button
@@ -554,6 +547,19 @@ export function AnalysisBar() {
           {popover === 'help' && <ShortcutsPopover />}
         </div>
       </div>
+      {/* Chips get their own row so the summary, metrics and legend never get squeezed out. */}
+      {meta && hasNodes && analysisResults.length > 0 && (
+        <div
+          aria-label="Components by status — click to select"
+          role="list"
+          style={{ display: 'flex', gap: 6, overflowX: 'auto', alignItems: 'center', height: 36, padding: '0 16px 4px', background: 'var(--bg-surface)', flexShrink: 0 }}
+          className="scrollbar-thin"
+        >
+          <div role="listitem" style={{ flexShrink: 0 }}><StatusLegend /></div>
+          <div role="presentation"><Divider /></div>
+          {analysisResults.map(r => <div role="listitem" key={r.nodeId} style={{ flexShrink: 0 }}><ResultChip r={r} onSelect={selectNode} /></div>)}
+        </div>
+      )}
     </>
   );
 }
