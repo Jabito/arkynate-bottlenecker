@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDiagramStore } from '../store/diagramStore';
 import { LESSONS, type Lesson } from '../data/lessons';
 import { AdBanner } from '../components/AdBanner';
+import { lessonHref } from '../lib/deepLinks';
 
 const GRID_MAX = 1680;
 const GUTTER = 'clamp(16px, 4vw, 32px)';
+/** Clears the sticky header when a `/lessons#<id>` link scrolls a card into view. */
+const HEADER_CLEARANCE = 96;
 
 function Badge({ label, color }: { label: string; color: string }) {
   return (
@@ -55,25 +58,25 @@ const itemStyle: React.CSSProperties = { fontSize: 12, color: 'var(--text-muted)
 
 function LessonCard({ lesson }: { lesson: Lesson }) {
   const navigate = useNavigate();
-  const loadTemplate = useDiagramStore(s => s.loadTemplate);
   const isDirty = useDiagramStore(s => s.isDirty);
   const diagramName = useDiagramStore(s => s.diagramName);
   const [confirming, setConfirming] = useState(false);
 
-  const open = () => {
-    loadTemplate(lesson.diagram);
-    navigate('/playground');
-  };
+  const href = lessonHref(lesson.id);
+  // The playground opens the lesson from `?lesson=` and starts its lesson panel (#100).
+  const open = () => navigate(href);
 
-  // Ask first when the playground has unsaved work (#10); the replace stays undoable.
-  const handleOpen = () => {
-    if (isDirty) setConfirming(true);
-    else open();
+  // A real link (copyable, middle-click); ask first when the playground has unsaved work (#10).
+  const handleOpen = (e: React.MouseEvent) => {
+    if (!isDirty || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    setConfirming(true);
   };
 
   return (
     <article
       id={lesson.id}
+      tabIndex={-1}
       className="bn-lesson-card"
       style={{
         background: 'var(--bg-surface)',
@@ -83,6 +86,7 @@ function LessonCard({ lesson }: { lesson: Lesson }) {
         flexDirection: 'column',
         overflow: 'hidden',
         minWidth: 0,
+        scrollMarginTop: HEADER_CLEARANCE,
       }}
     >
       {/* Card header */}
@@ -106,6 +110,15 @@ function LessonCard({ lesson }: { lesson: Lesson }) {
           }}>
             {lesson.title}
           </h2>
+          <a
+            href={`#${lesson.id}`}
+            className="bn-link"
+            aria-label={`Link to the ${lesson.title} lesson`}
+            title="Link to this lesson"
+            style={{ fontSize: 13, marginLeft: 'auto' }}
+          >
+            #
+          </a>
         </div>
         <p style={{
           margin: 0,
@@ -161,19 +174,22 @@ function LessonCard({ lesson }: { lesson: Lesson }) {
             </div>
           </div>
         ) : (
-          <button
+          <Link
+            to={href}
             onClick={handleOpen}
             className="bn-btn-primary"
             style={{
-              width: '100%',
+              display: 'block',
+              textAlign: 'center',
+              textDecoration: 'none',
               borderRadius: 8,
               padding: '10px 16px',
               fontSize: 13,
               fontFamily: "'Space Grotesk', sans-serif",
             }}
           >
-            Open in Playground →
-          </button>
+            Start the lesson in the Playground →
+          </Link>
         )}
       </div>
     </article>
@@ -181,6 +197,18 @@ function LessonCard({ lesson }: { lesson: Lesson }) {
 }
 
 export default function LessonsPage() {
+  // `/lessons#<id>` (from the playground's lesson panel or a shared link): the route renders
+  // after the browser's own anchor jump, so scroll the card into view here.
+  const { hash } = useLocation();
+  useEffect(() => {
+    const id = decodeURIComponent(hash.slice(1));
+    if (!id) return;
+    const card = document.getElementById(id);
+    if (!card) return;
+    card.scrollIntoView({ block: 'start' });
+    card.focus({ preventScroll: true });
+  }, [hash]);
+
   useEffect(() => {
     document.title = 'Architecture Bottleneck Lessons — Learn to Avoid System Bottlenecks | Bottlenecker';
     const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');

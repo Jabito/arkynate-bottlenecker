@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -21,6 +21,7 @@ import { NODE_DEFAULTS } from '../data/nodeDefaults';
 import { TEMPLATES } from '../data/templates';
 import { readShareLocation } from '../lib/shareCodec';
 import { templateKey } from '../lib/deepLinks';
+import { criticalPathEdgeIds } from '../lib/criticalPath';
 import { LoadGeneratorNode } from '../nodes/LoadGeneratorNode';
 import { LoadBalancerNode } from '../nodes/LoadBalancerNode';
 import { ServerNode } from '../nodes/ServerNode';
@@ -31,6 +32,9 @@ import { ComponentPalette } from '../components/ComponentPalette';
 import { ConfigPanel } from '../components/ConfigPanel';
 import { AnalysisBar } from '../components/AnalysisBar';
 import { AdBanner } from '../components/AdBanner';
+
+// Lesson data loads only once a lesson is open (#100).
+const LessonPanel = lazy(() => import('../components/LessonPanel'));
 
 const nodeTypes: NodeTypes = {
   loadGenerator: LoadGeneratorNode,
@@ -76,6 +80,7 @@ function useDeepLinks() {
   const { search, hash } = useLocation();
   const openShareLink = useDiagramStore(s => s.openShareLink);
   const loadTemplate = useDiagramStore(s => s.loadTemplate);
+  const loadLesson = useDiagramStore(s => s.loadLesson);
   const notify = useDiagramStore(s => s.notify);
 
   useEffect(() => {
@@ -104,13 +109,13 @@ function useDeepLinks() {
       import('../data/lessons')
         .then(({ LESSONS }) => {
           const lesson = LESSONS.find(l => l.id === lessonId);
-          if (lesson) loadTemplate(lesson.diagram);
+          if (lesson) loadLesson(lesson);
           else notify(`There is no lesson called “${lessonId.slice(0, 40)}”.`);
         })
         .catch(() => notify('The lesson could not be loaded. Check your connection and try again.'))
         .finally(clean);
     }
-  }, [search, hash, navigate, openShareLink, loadTemplate, notify]);
+  }, [search, hash, navigate, openShareLink, loadTemplate, loadLesson, notify]);
 }
 
 function EmptyState() {
@@ -155,10 +160,24 @@ function EmptyState() {
   );
 }
 
+/**
+ * Edges along `meta.criticalPath` get `bn-critical-path` while that path runs through a critical
+ * node (#79). The class is added here, at render time only, so it never reaches the store, a save or a share.
+ */
+function useCriticalPathEdges(edges: Edge[]): Edge[] {
+  const path = useDiagramStore(s => s.analysisMeta?.criticalPath);
+  const results = useDiagramStore(s => s.analysisResults);
+  return useMemo(() => {
+    const ids = criticalPathEdgeIds(edges, path, results);
+    if (ids.size === 0) return edges;
+    return edges.map(e => (ids.has(e.id) ? { ...e, className: e.className ? `${e.className} bn-critical-path` : 'bn-critical-path' } : e));
+  }, [edges, path, results]);
+}
+
 function FlowCanvas() {
   const { screenToFlowPosition, fitView } = useReactFlow();
   const nodes = useDiagramStore(s => s.nodes);
-  const edges = useDiagramStore(s => s.edges);
+  const edges = useCriticalPathEdges(useDiagramStore(s => s.edges));
   const loadId = useDiagramStore(s => s.loadId);
   const onNodesChange = useDiagramStore(s => s.onNodesChange);
   const onEdgesChange = useDiagramStore(s => s.onEdgesChange);
@@ -304,6 +323,16 @@ function DesktopRequired() {
   );
 }
 
+function ActiveLesson() {
+  const active = useDiagramStore(s => s.activeLessonId !== null);
+  if (!active) return null;
+  return (
+    <Suspense fallback={null}>
+      <LessonPanel />
+    </Suspense>
+  );
+}
+
 function Workspace() {
   useDeepLinks();
   return (
@@ -311,6 +340,7 @@ function Workspace() {
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 50px)', overflow: 'hidden' }}>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <ComponentPalette />
+          <ActiveLesson />
           <FlowCanvas />
           <ConfigPanel />
         </div>
