@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { addEdge, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
+import { addEdge, applyNodeChanges, applyEdgeChanges } from '../lib/flowChanges';
 import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/react';
 import type { NodeData, EdgeData, AnalysisResult, AnalysisMeta } from '../types';
 import { COMPUTED_NODE_KEYS } from '../types';
