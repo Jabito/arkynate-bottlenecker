@@ -17,6 +17,6 @@
 ## Checklist
 
 - [ ] Tested in browser
-- [ ] `npm run lint` passes
+- [ ] `npm run lint`, `npm run typecheck` and `npm test` pass (CI checks them too)
 - [ ] No breaking changes (or described below)
 - [ ] Updated README if needed

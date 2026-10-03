@@ -10,8 +10,9 @@ We will acknowledge receipt within 48 hours and aim to provide a fix or mitigati
 
 ## Scope
 
-Bottlenecker is a client-side-only application with no backend. Security issues we care about include:
+Bottlenecker is a static single-page app with no backend of its own. Diagrams stay in the browser (localStorage, share links in the URL fragment). The only third parties are an anonymous event counter (Supabase REST, insert-only event names) and Google AdSense. Security issues we care about include:
 
-- Cross-site scripting (XSS) via crafted diagram data
+- Cross-site scripting (XSS) or CSS injection via crafted diagram data (imported files or share links)
+- Abuse of the public Supabase endpoint (e.g. writing arbitrary rows or reading more than the counters)
 - Dependency vulnerabilities
 - Data exfiltration through third-party scripts

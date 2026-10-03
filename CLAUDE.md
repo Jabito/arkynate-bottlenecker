@@ -2,59 +2,48 @@
 
 ## What It Is
 
-React + Vite SPA — interactive architecture load simulator. Uses `@xyflow/react` for node-graph canvas and Zustand for state. No backend required.
+React 19 + Vite + TypeScript SPA — interactive architecture load simulator. `@xyflow/react` canvas, Zustand state, Tailwind 4. No backend: the simulation runs client-side; the only network calls are anonymous Supabase event counts (`src/lib/analytics.ts`) and Google AdSense.
 
----
-
-## Commands
+## Commands (npm — the repo has package-lock.json; Node from `.nvmrc`)
 
 ```bash
-pnpm install
-pnpm dev        # localhost:5173
-pnpm build      # dist/
-pnpm deploy     # S3 + CloudFront invalidation (set CF_DISTRIBUTION_ID first)
+npm install
+npm run dev        # localhost:5173
+npm run build      # tsc -b + vite build → dist/
+npm run lint       # eslint
+npm run typecheck  # tsc -b
+npm test           # vitest run
 ```
 
----
+## Where Things Are
 
-## Key Libraries
-
-| Library | Purpose |
+| Path | What |
 |---|---|
-| `@xyflow/react` | Node-graph canvas (services, edges, traffic flows) |
-| `zustand` | Global state (node configs, simulation state) |
-| `recharts` | Throughput/latency charts |
+| `src/engine/` | Simulation (`analyze.ts` fixed-point solver, `capacity.ts`, `allocation.ts`, `format.ts` thresholds/formatters, `limits.ts` field ranges) + `*.test.ts` |
+| `src/store/diagramStore.ts` | Canvas state, undo, persistence (`bottlenecker-diagrams`), auto-analysis, import/export/share |
+| `src/lib/` | Analytics, share-link codec (URL `#fragment`), diagram validation, image export |
+| `src/nodes/`, `src/components/` | Node cards, palette, config panel, analysis bar, navbar |
+| `src/pages/` | Home, Components, Lessons, Playground, Privacy |
+| `src/data/` | Templates, lessons, node defaults |
+| `src/index.css` | Theme tokens (`--bg-*`, `--text-*`, `--st-*`, `--edge-*`) for Dark / `body.theme-light` / `body.theme-matrix` |
 
----
+## Conventions
 
-## Architecture Patterns
-
-- **Nodes** represent services (API, DB, cache, queue); **edges** represent traffic flows with configurable RPS + latency.
-- Simulation runs entirely client-side — no backend required.
-- State is serializable JSON — persist to `localStorage` for session restore.
-- Wrap the root app with `ReactFlowProvider` — required for any hook that calls `useReactFlow()`.
-
----
+- Colours come from the tokens in `src/index.css` — no hex for text, surfaces, borders, status or edges in components. Themes apply on `/playground` only (Navbar calls `applyTheme`).
+- Read the store with selectors (`useDiagramStore(s => s.x)` or `useShallow`), never the whole store.
+- Engine-computed node fields are listed in `COMPUTED_NODE_KEYS` (`src/types`) and stripped on save/export/share.
+- Wrap anything that calls `useReactFlow()` in `ReactFlowProvider` (PlaygroundPage does).
 
 ## Deploy
 
-S3 bucket + CloudFront distribution.
+S3 + CloudFront via GitHub Actions: `ci.yml` (lint, typecheck, test, build) gates `deploy.yml`, which runs `deploy.sh --skip-build`. Manual: `S3_BUCKET=… CF_DISTRIBUTION_ID=… ./deploy.sh`. Never deploy from an agent session.
 
-```bash
-pnpm build
-pnpm deploy   # requires CF_DISTRIBUTION_ID env var
-```
+## SEO
 
----
-
-## SEO Maintenance
-
-- `softwareVersion` in `index.html` JSON-LD must be kept in sync with `package.json` version on every release.
-- `dateModified` in `index.html` JSON-LD must be updated to the release date on every deploy.
-
----
+`softwareVersion`/`dateModified` in `index.html` JSON-LD and `sitemap.xml` `lastmod` are stamped at build time by the plugin in `vite.config.ts` — bump `package.json` version per release; no manual date edits. The Navbar sets per-route canonical/og:url. `public/banner.png` is the og/twitter image.
 
 ## Known Errors & Fixes
 
-- **`useReactFlow must be used inside ReactFlow`**: `@xyflow/react` requires an explicit `ReactFlowProvider` wrapper around any component that calls `useReactFlow()`. Wrap the root layout or the canvas component.
-- **CloudFront cache not clearing after deploy**: CloudFront invalidation is async — allow 2–3 minutes for the cache to clear. The deploy script should trigger an invalidation (`/*`) automatically; verify it ran with `aws cloudfront list-invalidations`.
+- **`useReactFlow must be used inside ReactFlow`**: wrap the component in `ReactFlowProvider`.
+- **CloudFront cache not clearing after deploy**: invalidation is async — allow 2–3 minutes; check with `aws cloudfront list-invalidations`.
+- **xyflow controls/minimap look unthemed**: theme them through the `--xy-*` variables on `.react-flow` in `index.css`, not by overriding its classes (its stylesheet loads after ours).
