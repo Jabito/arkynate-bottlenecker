@@ -141,4 +141,24 @@ describe('diagram store', () => {
     expect(st().nodes).toHaveLength(simple.nodes.length);
     expect(st().notice?.text).toMatch(/damaged or incomplete/);
   });
+
+  it('migrates v0 saves and validates everything restored from storage (#80)', async () => {
+    const { migrate, merge } = useDiagramStore.persist.getOptions();
+    const v0 = { analyzeCount: 7, savedDiagrams: { Old: { name: 'Old', nodes: [{ id: 'lb', type: 'loadBalancer', position: { x: 0, y: 0 }, style: { position: 'fixed' }, data: { kind: 'loadBalancer', label: 'LB', maxQPS: 900, strategy: 'weighted', status: 'critical' } }], edges: [] } } };
+    const migrated = await migrate!(v0, 0);
+    const state = merge!(migrated, st());
+    expect(state).not.toHaveProperty('analyzeCount');
+    expect(state.nodes).toEqual([]);
+    const old = state.savedDiagrams.Old;
+    expect(old.savedAt).toBeGreaterThan(0);
+    expect(old.nodes[0]).not.toHaveProperty('style');
+    expect(old.nodes[0].data).toMatchObject({ kind: 'loadBalancer', label: 'LB', maxQPS: 900, strategy: 'weighted' });
+    expect(old.nodes[0].data).not.toHaveProperty('status');
+
+    const restored = merge!({ nodes: simple.nodes, edges: simple.edges, diagramName: 'Mine', savedDiagrams: 'junk', isDirty: true }, st());
+    expect(restored.diagramName).toBe('Mine');
+    expect(restored.isDirty).toBe(true);
+    expect(restored.savedDiagrams).toEqual({});
+    expect(restored.analysisResults.length).toBeGreaterThan(0);
+  });
 });
