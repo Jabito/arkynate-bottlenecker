@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useDiagramStore } from './diagramStore';
 import { TEMPLATES } from '../data/templates';
+import { LESSONS } from '../data/lessons';
 
 const initial = useDiagramStore.getState();
 const st = () => useDiagramStore.getState();
@@ -160,5 +161,57 @@ describe('diagram store', () => {
     expect(restored.isDirty).toBe(true);
     expect(restored.savedDiagrams).toEqual({});
     expect(restored.analysisResults.length).toBeGreaterThan(0);
+  });
+
+  describe('lessons (#100)', () => {
+    const [first, second] = LESSONS;
+
+    it('loadLesson opens the diagram and starts the lesson; any other replacement ends it', () => {
+      st().loadLesson(first);
+      expect(st().activeLessonId).toBe(first.id);
+      expect(st().diagramName).toBe(first.diagram.name);
+      expect(st().isDirty).toBe(false);
+      st().updateNodeData(st().nodes[1].id, { label: 'edited' });
+      expect(st().activeLessonId).toBe(first.id);
+      st().loadTemplate(simple);
+      expect(st().activeLessonId).toBeNull();
+      st().loadLesson(second);
+      st().newDiagram();
+      expect(st().activeLessonId).toBeNull();
+    });
+
+    it('undoing the load that started a lesson ends it; redo brings it back', () => {
+      st().loadTemplate(simple);
+      st().loadLesson(first);
+      st().undo();
+      expect(st().activeLessonId).toBeNull();
+      expect(st().diagramName).toBe(simple.name);
+      st().redo();
+      expect(st().activeLessonId).toBe(first.id);
+    });
+
+    it('endLesson keeps the canvas, and undo/redo never reopen the closed lesson', () => {
+      st().loadLesson(first);
+      const id = st().nodes[1].id;
+      st().updateNodeData(id, { label: 'edited' });
+      st().endLesson();
+      expect(st().activeLessonId).toBeNull();
+      expect(st().nodes.find(n => n.id === id)?.data.label).toBe('edited');
+      st().undo();
+      expect(st().activeLessonId).toBeNull();
+      st().redo();
+      expect(st().activeLessonId).toBeNull();
+    });
+
+    it('persists the active lesson and validates it on restore', () => {
+      const { partialize, merge } = useDiagramStore.persist.getOptions();
+      st().loadLesson(first);
+      expect(partialize!(st())).toMatchObject({ activeLessonId: first.id });
+      const base = { nodes: first.diagram.nodes, edges: first.diagram.edges, diagramName: 'L', savedDiagrams: {}, isDirty: true };
+      expect(merge!({ ...base, activeLessonId: first.id }, st()).activeLessonId).toBe(first.id);
+      expect(merge!({ ...base, activeLessonId: '<script>' }, st()).activeLessonId).toBeNull();
+      expect(merge!({ ...base, activeLessonId: 42 }, st()).activeLessonId).toBeNull();
+      expect(merge!({ ...base, nodes: [], activeLessonId: first.id }, st()).activeLessonId).toBeNull();
+    });
   });
 });

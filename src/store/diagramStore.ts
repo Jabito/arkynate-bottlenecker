@@ -5,6 +5,7 @@ import type { Node, Edge, NodeChange, EdgeChange, Connection } from '@xyflow/rea
 import type { NodeData, EdgeData, AnalysisResult, AnalysisMeta } from '../types';
 import { COMPUTED_NODE_KEYS } from '../types';
 import type { Template } from '../data/templates';
+import type { Lesson } from '../data/lessons';
 import { analyzeGraph } from '../engine/analyze';
 import { formatQPS } from '../engine/format';
 import { trackEvent } from '../lib/analytics';
@@ -16,7 +17,8 @@ import type { ShareLocation } from '../lib/shareCodec';
 import { renderViewport, downloadHref, fileSlug } from '../lib/exportImage';
 
 type AppNode = Node<NodeData>;
-type Snapshot = { nodes: AppNode[]; edges: Edge[]; name: string };
+/** `lesson`: the lesson active at that point, so undoing the load that started a lesson ends it. */
+type Snapshot = { nodes: AppNode[]; edges: Edge[]; name: string; lesson: string | null };
 
 export interface SavedDiagram { nodes: AppNode[]; edges: Edge[]; name: string; savedAt: number }
 export type ImportResult = { ok: true } | { ok: false; error: string };
@@ -24,6 +26,7 @@ export interface Notice { id: number; text: string }
 
 const COMPUTED = new Set<string>(COMPUTED_NODE_KEYS);
 const DEFAULT_NAME = 'Untitled Diagram';
+const LESSON_ID = /^[a-z0-9-]{1,64}$/;
 const HISTORY_LIMIT = 50;
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const UNDO_HINT = `press ${isMac ? '⌘Z' : 'Ctrl+Z'} to undo`;
@@ -109,6 +112,12 @@ interface DiagramState {
   notice: Notice | null;
   /** Increments each time the whole canvas is replaced (the playground re-fits the view). */
   loadId: number;
+  /**
+   * The lesson shown in the playground's lesson panel. Set by `loadLesson`; any other canvas
+   * replacement (template, saved, import, share, new) and `endLesson` clear it. Persisted, so a
+   * reload keeps the lesson and the learner's edits.
+   */
+  activeLessonId: string | null;
   _history: Snapshot[];
   _future: Snapshot[];
 
@@ -127,6 +136,8 @@ interface DiagramState {
   loadDiagram: (name: string) => void;
   deleteDiagram: (name: string) => void;
   loadTemplate: (template: Template) => void;
+  loadLesson: (lesson: Pick<Lesson, 'id' | 'diagram'>) => void;
+  endLesson: () => void;
   openShareLink: (loc: ShareLocation) => Promise<ImportResult>;
   setDiagramName: (name: string) => void;
   notify: (text: string) => void;
@@ -139,7 +150,7 @@ interface DiagramState {
   getShareURL: () => Promise<string>;
 }
 
-type Persisted = Pick<DiagramState, 'nodes' | 'edges' | 'diagramName' | 'savedDiagrams' | 'isDirty'>;
+type Persisted = Pick<DiagramState, 'nodes' | 'edges' | 'diagramName' | 'savedDiagrams' | 'isDirty' | 'activeLessonId'>;
 
 let storageErrorShown = false;
 const storage = createDebouncedStorage<Persisted>({
@@ -166,12 +177,12 @@ export const useDiagramStore = create<DiagramState>()(
   persist(
     (set, get) => {
       const snap = (): Snapshot => {
-        const { nodes, edges, diagramName } = get();
-        return { nodes, edges, name: diagramName };
+        const { nodes, edges, diagramName, activeLessonId } = get();
+        return { nodes, edges, name: diagramName, lesson: activeLessonId };
       };
 
-      /** Every whole-canvas replacement: undoable, clean, re-fitted, announced. */
-      const replaceCanvas = (nodes: AppNode[], edges: Edge[], name: string, verb: string, skipped = 0) => {
+      /** Every whole-canvas replacement: undoable, clean, re-fitted, announced. Ends any lesson unless it starts one. */
+      const replaceCanvas = (nodes: AppNode[], edges: Edge[], name: string, verb: string, skipped = 0, lessonId: string | null = null) => {
         const before = get();
         const undoable = before.nodes.length > 0;
         const extra = skipped > 0 ? ` · ${skipped} invalid item${skipped === 1 ? '' : 's'} skipped` : '';
@@ -183,6 +194,7 @@ export const useDiagramStore = create<DiagramState>()(
           selectedEdgeId: null,
           isDirty: false,
           loadId: s.loadId + 1,
+          activeLessonId: lessonId,
           _history: pushSnapshot(s._history, snap()),
           _future: [],
           notice: makeNotice(`${verb} “${name}”${extra}${undoable ? ` — ${UNDO_HINT}` : ''}`),
@@ -221,6 +233,7 @@ export const useDiagramStore = create<DiagramState>()(
           selectedNodeId: null,
           selectedEdgeId: null,
           isDirty: true,
+          activeLessonId: target.lesson,
           _history: history,
           _future: future,
         });
@@ -238,6 +251,7 @@ export const useDiagramStore = create<DiagramState>()(
         isDirty: false,
         notice: null,
         loadId: 0,
+        activeLessonId: null,
         _history: [],
         _future: [],
 
@@ -371,6 +385,7 @@ export const useDiagramStore = create<DiagramState>()(
             diagramName: DEFAULT_NAME,
             isDirty: false,
             loadId: s.loadId + 1,
+            activeLessonId: null,
             _history: pushSnapshot(s._history, snap()),
             _future: [],
             notice: before.nodes.length > 0 ? makeNotice(`New diagram — ${UNDO_HINT}`) : s.notice,
@@ -408,6 +423,20 @@ export const useDiagramStore = create<DiagramState>()(
           trackEvent('template_used');
           const v = validateDiagram(template);
           replaceCanvas(v.nodes, v.edges, template.name, 'Loaded');
+        },
+
+        loadLesson: (lesson) => {
+          trackEvent('template_used');
+          const v = validateDiagram(lesson.diagram);
+          replaceCanvas(v.nodes, v.edges, lesson.diagram.name, 'Opened lesson', 0, lesson.id);
+        },
+
+        // Closing the panel ends the lesson for good: undo/redo won't bring the panel back.
+        endLesson: () => {
+          const id = get().activeLessonId;
+          if (id === null) return;
+          const forget = (h: Snapshot) => (h.lesson === id ? { ...h, lesson: null } : h);
+          set(s => ({ activeLessonId: null, _history: s._history.map(forget), _future: s._future.map(forget) }));
         },
 
         openShareLink: async (loc) => {
@@ -495,12 +524,13 @@ export const useDiagramStore = create<DiagramState>()(
         diagramName: s.diagramName,
         savedDiagrams: s.savedDiagrams,
         isDirty: s.isDirty,
+        activeLessonId: s.activeLessonId,
       }),
       // v0 persisted only { savedDiagrams, analyzeCount }; the working canvas starts empty.
       migrate: (persisted, version) => {
         const p = isObject(persisted) ? persisted : {};
         if (version === 0) {
-          return { nodes: [], edges: [], diagramName: DEFAULT_NAME, savedDiagrams: p.savedDiagrams ?? {}, isDirty: false } as unknown as Persisted;
+          return { nodes: [], edges: [], diagramName: DEFAULT_NAME, savedDiagrams: p.savedDiagrams ?? {}, isDirty: false, activeLessonId: null } as unknown as Persisted;
         }
         return p as unknown as Persisted;
       },
@@ -521,6 +551,10 @@ export const useDiagramStore = create<DiagramState>()(
           diagramName: cleanName(p.diagramName, DEFAULT_NAME),
           savedDiagrams,
           isDirty: p.isDirty === true && work.nodes.length > 0,
+          // Unknown ids are dropped by the lesson panel once the lesson list loads.
+          activeLessonId: typeof p.activeLessonId === 'string' && LESSON_ID.test(p.activeLessonId) && work.nodes.length > 0
+            ? p.activeLessonId
+            : null,
         };
       },
     },
