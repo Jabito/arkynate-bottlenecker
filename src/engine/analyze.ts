@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { NodeData, AnalysisResult, NodeStatus, EdgeData } from '../types';
+import type { NodeData, AnalysisResult, NodeStatus, EdgeData, AnalysisMeta } from '../types';
 
 function getCapacity(data: NodeData): number {
   switch (data.kind) {
@@ -39,7 +39,7 @@ export function analyzeGraph(
   nodes: Node<NodeData>[],
   edges: Edge[],
   qpsMultiplier = 1,
-): { updatedNodes: Node<NodeData>[]; results: AnalysisResult[]; edgeFlows: Map<string, number> } {
+): { updatedNodes: Node<NodeData>[]; results: AnalysisResult[]; edgeFlows: Map<string, number>; meta: AnalysisMeta } {
   const inEdgeIds  = new Map<string, string[]>();
   const outEdgeIds = new Map<string, string[]>();
   const edgeById   = new Map<string, Edge>();
@@ -219,5 +219,7 @@ export function analyzeGraph(
 
   const statusOrder: Record<NodeStatus, number> = { critical: 0, near: 1, warning: 2, healthy: 3 };
   results.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
-  return { updatedNodes, results, edgeFlows: edgeQPS };
+  // TODO(elevate-engine): fill meta for real (warnings, critical path, end-to-end latency, success rate)
+  const meta: AnalysisMeta = { warnings: [], criticalPath: [], endToEndLatencyMs: null, saturated: results.some(r => r.status === 'critical'), successRatePct: 100 };
+  return { updatedNodes, results, edgeFlows: edgeQPS, meta };
 }

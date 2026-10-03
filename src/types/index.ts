@@ -116,3 +116,28 @@ export interface EdgeData extends Record<string, unknown> {
   retryCount?: number;
   computedQPS?: number;
 }
+
+/** Node-data keys written by the engine. Stripped before save / export / share. Engine owns this list. */
+export const COMPUTED_NODE_KEYS = [
+  'actualQPS', 'status', 'errorRatePct', 'estimatedLatencyMs', 'utilization', 'capacity',
+] as const;
+
+export interface AnalysisWarning {
+  kind: 'cycle' | 'unallocated' | 'overallocated' | 'invalid';
+  message: string;
+  nodeId?: string;
+  edgeId?: string;
+}
+
+/** Whole-graph facts from one analysis run (alongside the per-node AnalysisResult[]). */
+export interface AnalysisMeta {
+  warnings: AnalysisWarning[];
+  /** Node ids along the slowest traffic-carrying path, source first. */
+  criticalPath: string[];
+  /** Traffic-weighted end-to-end latency; null when nothing flows, Infinity when saturated. */
+  endToEndLatencyMs: number | null;
+  /** True when any traffic-carrying node is over capacity. */
+  saturated: boolean;
+  /** Share of generated requests that complete successfully end to end (0-100). */
+  successRatePct: number;
+}
