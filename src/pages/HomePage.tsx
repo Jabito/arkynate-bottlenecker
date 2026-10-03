@@ -180,6 +180,30 @@ export default function HomePage() {
             ⚡ {formatCount(analyzeCount)} simulations run worldwide
           </div>
         )}
+        {/* Product shot: the Retry Storm template mid-incident (#98) */}
+        <figure style={{ margin: 'clamp(32px, 5vw, 56px) 0 0', width: '100%', maxWidth: 1040 }}>
+          {(() => {
+            const shot = (
+              <img
+                src="/hero-canvas.webp"
+                width={1600}
+                height={830}
+                alt="Bottlenecker canvas: a load balancer feeding two API servers at 83% and a database critical at 178% on its write path"
+                style={{
+                  display: 'block', width: '100%', height: 'auto',
+                  borderRadius: 14, border: '1px solid var(--border)',
+                  boxShadow: '0 24px 64px color-mix(in srgb, var(--bg-base) 70%, black)',
+                }}
+              />
+            );
+            return isPhone ? shot : (
+              <Link to="/playground?template=retry-storm" aria-label="Open this Retry Storm example in the Playground">{shot}</Link>
+            );
+          })()}
+          <figcaption style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 12 }}>
+            Retry Storm template: retries push the primary database past its write capacity.
+          </figcaption>
+        </figure>
       </section>
 
       {/* Ad */}
