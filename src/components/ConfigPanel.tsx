@@ -1,262 +1,386 @@
+import { useMemo, useState } from 'react';
 import type {
   LoadGeneratorData, LoadBalancerData, ServerData,
-  DatabaseData, CacheData, QueueData, NodeData, EdgeData,
+  DatabaseData, CacheData, QueueData, NodeData, EdgeData, NodeKind,
 } from '../types';
 import { useDiagramStore } from '../store/diagramStore';
+import { NODE_FIELD_LIMITS, EDGE_FIELD_LIMITS, clampField, type FieldLimit } from '../engine/limits';
+import { expectedAttempts } from '../engine/allocation';
+import { DEFAULT_LATENCY_MS } from '../engine/capacity';
+import { formatQPS } from '../engine/format';
 import { AdBanner } from './AdBanner';
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+type Update = (p: Partial<NodeData>) => void;
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 4,
+  textTransform: 'uppercase', letterSpacing: '0.06em',
+};
+const hintStyle: React.CSSProperties = {
+  fontSize: 11, color: 'var(--text-dim)', background: 'var(--bg-elevated)', borderRadius: 6,
+  padding: '6px 10px', marginBottom: 14, lineHeight: 1.6,
+};
+const warnStyle: React.CSSProperties = { ...hintStyle, color: 'var(--st-warning)', border: '1px solid color-mix(in srgb, var(--st-warning) 40%, transparent)' };
+
+function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ display: 'block', fontSize: 11, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {label}
-      </label>
+      <label htmlFor={id} style={labelStyle}>{label}</label>
       {children}
     </div>
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: '#0a0f1e', border: '1px solid #1e2d45',
-  borderRadius: 6, padding: '6px 10px', color: '#e2e8f0', fontSize: 13, outline: 'none',
-};
-
-function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+function TextField({ id, label, value, placeholder, onChange }: {
+  id: string; label: string; value: string; placeholder?: string; onChange: (v: string) => void;
+}) {
   return (
-    <input {...props} style={{ ...inputStyle, ...props.style }}
-      onFocus={e => { e.currentTarget.style.borderColor = '#22d3ee'; }}
-      onBlur={e => { e.currentTarget.style.borderColor = '#1e2d45'; }}
+    <Field id={id} label={label}>
+      <input id={id} className="bn-input" value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} />
+    </Field>
+  );
+}
+
+function SelectField<T extends string>({ id, label, value, options, onChange }: {
+  id: string; label: string; value: T; options: [T, string][]; onChange: (v: T) => void;
+}) {
+  return (
+    <Field id={id} label={label}>
+      <select id={id} className="bn-input" style={{ cursor: 'pointer' }} value={value} onChange={e => onChange(e.target.value as T)}>
+        {options.map(([v, text]) => <option key={v} value={v}>{text}</option>)}
+      </select>
+    </Field>
+  );
+}
+
+/**
+ * Numeric input clamped to the shared limits table (#13). While the field is empty or
+ * mid-edit the store keeps the last good value (an empty optional field means "default");
+ * on blur the field shows the value actually in use.
+ */
+function NumberField({ id, label, value, limit, optional, placeholder, onChange }: {
+  id: string; label: string; value: number | undefined; limit: FieldLimit;
+  optional?: boolean; placeholder?: string; onChange: (v: number | undefined) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? (value == null ? '' : String(value));
+  const parsed = draft == null || draft.trim() === '' ? null : Number(draft);
+  const outOfRange = parsed != null && Number.isFinite(parsed) && clampField(parsed, limit) !== parsed;
+  const hintId = `${id}-hint`;
+  return (
+    <Field id={id} label={label}>
+      <input
+        id={id}
+        className="bn-input"
+        type="number"
+        inputMode="decimal"
+        min={limit.min}
+        max={limit.max}
+        step={limit.integer ? 1 : 'any'}
+        placeholder={placeholder}
+        value={shown}
+        aria-invalid={outOfRange || undefined}
+        aria-describedby={outOfRange ? hintId : undefined}
+        onChange={e => {
+          const text = e.target.value;
+          setDraft(text);
+          if (text.trim() === '') { if (optional) onChange(undefined); return; }
+          const n = Number(text);
+          if (Number.isFinite(n)) onChange(clampField(n, limit));
+        }}
+        onBlur={() => setDraft(null)}
+      />
+      {outOfRange && (
+        <div id={hintId} style={{ fontSize: 10, color: 'var(--st-warning)', marginTop: 3 }}>
+          Allowed {limit.min.toLocaleString()}–{limit.max.toLocaleString()}; using {clampField(parsed!, limit).toLocaleString()}
+        </div>
+      )}
+    </Field>
+  );
+}
+
+/** Number field bound to a node field and its NODE_FIELD_LIMITS row. */
+function NodeNumber({ nodeId, kind, field, label, value, optional, placeholder, onUpdate }: {
+  nodeId: string; kind: NodeKind; field: string; label: string; value: number | undefined;
+  optional?: boolean; placeholder?: string; onUpdate: Update;
+}) {
+  return (
+    <NumberField
+      id={`cfg-${nodeId}-${field}`} label={label} value={value} optional={optional} placeholder={placeholder}
+      limit={NODE_FIELD_LIMITS[kind][field]}
+      onChange={v => onUpdate({ [field]: v } as Partial<NodeData>)}
     />
   );
 }
 
-function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} style={{ ...inputStyle, cursor: 'pointer' }} />;
-}
-
-function LoadGeneratorConfig({ data, onUpdate }: { data: LoadGeneratorData; onUpdate: (p: Partial<NodeData>) => void }) {
+/** Error rate + base latency, common to every kind except the load generator. */
+function ReliabilityFields({ nodeId, kind, data, onUpdate }: {
+  nodeId: string; kind: Exclude<NodeKind, 'loadGenerator'>; data: { errorRate?: number; baseLatencyMs?: number }; onUpdate: Update;
+}) {
   return (
     <>
-      <Field label="Label"><Input value={data.label} onChange={e => onUpdate({ label: e.target.value })} /></Field>
-      <Field label="Output QPS"><Input type="number" min={1} value={data.outputQPS} onChange={e => onUpdate({ outputQPS: Number(e.target.value) })} /></Field>
+      <NodeNumber nodeId={nodeId} kind={kind} field="errorRate" label="Error rate (%)" value={data.errorRate ?? 0} onUpdate={onUpdate} />
+      <NodeNumber nodeId={nodeId} kind={kind} field="baseLatencyMs" label="Base latency (ms)" optional
+        placeholder={String(DEFAULT_LATENCY_MS[kind])} value={data.baseLatencyMs} onUpdate={onUpdate} />
     </>
   );
 }
 
-function LoadBalancerConfig({ data, onUpdate }: { data: LoadBalancerData; onUpdate: (p: Partial<NodeData>) => void }) {
+function LabelField({ nodeId, value, onUpdate }: { nodeId: string; value: string; onUpdate: Update }) {
+  return <TextField id={`cfg-${nodeId}-label`} label="Label" value={value} onChange={v => onUpdate({ label: v })} />;
+}
+
+function LoadGeneratorConfig({ id, data, onUpdate }: { id: string; data: LoadGeneratorData; onUpdate: Update }) {
   return (
     <>
-      <Field label="Label"><Input value={data.label} onChange={e => onUpdate({ label: e.target.value })} /></Field>
-      <Field label="Max QPS"><Input type="number" min={1} value={data.maxQPS} onChange={e => onUpdate({ maxQPS: Number(e.target.value) })} /></Field>
-      <Field label="Strategy">
-        <Select value={data.strategy} onChange={e => onUpdate({ strategy: e.target.value as LoadBalancerData['strategy'] })}>
-          <option value="round-robin">Round Robin</option>
-          <option value="weighted">Weighted</option>
-          <option value="least-conn">Least Connections</option>
-        </Select>
-      </Field>
-      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
-      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="2" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+      <LabelField nodeId={id} value={data.label} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="loadGenerator" field="outputQPS" label="Output QPS" value={data.outputQPS} onUpdate={onUpdate} />
     </>
   );
 }
 
-function ServerConfig({ data, onUpdate }: { data: ServerData; onUpdate: (p: Partial<NodeData>) => void }) {
+function LoadBalancerConfig({ id, data, onUpdate }: { id: string; data: LoadBalancerData; onUpdate: Update }) {
   return (
     <>
-      <Field label="Label"><Input value={data.label} onChange={e => onUpdate({ label: e.target.value })} /></Field>
-      <Field label="Max QPS (total)"><Input type="number" min={1} value={data.maxQPS} onChange={e => onUpdate({ maxQPS: Number(e.target.value) })} /></Field>
-      <Field label="Instances"><Input type="number" min={1} value={data.instances} onChange={e => onUpdate({ instances: Number(e.target.value) })} /></Field>
-      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
-      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="50" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+      <LabelField nodeId={id} value={data.label} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="loadBalancer" field="maxQPS" label="Max QPS" value={data.maxQPS} onUpdate={onUpdate} />
+      <div style={hintStyle}>Traffic splits equally across connections. To weight targets, set a percentage on each connection.</div>
+      <ReliabilityFields nodeId={id} kind="loadBalancer" data={data} onUpdate={onUpdate} />
     </>
   );
 }
 
-function DatabaseConfig({ data, onUpdate }: { data: DatabaseData; onUpdate: (p: Partial<NodeData>) => void }) {
+function ServerConfig({ id, data, onUpdate }: { id: string; data: ServerData; onUpdate: Update }) {
   return (
     <>
-      <Field label="Label"><Input value={data.label} onChange={e => onUpdate({ label: e.target.value })} /></Field>
-      <Field label="DB Type">
-        <Select value={data.dbType} onChange={e => onUpdate({ dbType: e.target.value as DatabaseData['dbType'] })}>
-          <option value="postgres">PostgreSQL</option>
-          <option value="mysql">MySQL</option>
-          <option value="mongodb">MongoDB</option>
-          <option value="redis-db">Redis</option>
-        </Select>
-      </Field>
-      <Field label="Max Read QPS"><Input type="number" min={1} value={data.maxReadQPS} onChange={e => onUpdate({ maxReadQPS: Number(e.target.value) })} /></Field>
-      <Field label="Max Write QPS"><Input type="number" min={1} value={data.maxWriteQPS} onChange={e => onUpdate({ maxWriteQPS: Number(e.target.value) })} /></Field>
-      <Field label="Read Replicas"><Input type="number" min={0} value={data.readReplicas} onChange={e => onUpdate({ readReplicas: Number(e.target.value) })} /></Field>
-      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
-      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="15" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+      <LabelField nodeId={id} value={data.label} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="server" field="maxQPS" label="Max QPS (per instance)" value={data.maxQPS} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="server" field="instances" label="Instances" value={data.instances} onUpdate={onUpdate} />
+      {data.capacity != null && (
+        <div style={hintStyle}>Total capacity {formatQPS(data.capacity)} (max QPS × instances)</div>
+      )}
+      <ReliabilityFields nodeId={id} kind="server" data={data} onUpdate={onUpdate} />
     </>
   );
 }
 
-function CacheConfig({ data, onUpdate }: { data: CacheData; onUpdate: (p: Partial<NodeData>) => void }) {
+const pct = (v: number) => `${Math.round(v)}%`;
+
+function DatabaseConfig({ id, data, onUpdate }: { id: string; data: DatabaseData; onUpdate: Update }) {
   return (
     <>
-      <Field label="Label"><Input value={data.label} onChange={e => onUpdate({ label: e.target.value })} /></Field>
-      <Field label="Cache Type">
-        <Select value={data.cacheType} onChange={e => onUpdate({ cacheType: e.target.value as CacheData['cacheType'] })}>
-          <option value="redis">Redis</option>
-          <option value="memcached">Memcached</option>
-          <option value="cdn">CDN</option>
-        </Select>
-      </Field>
-      <Field label="Hit Rate (%)"><Input type="number" min={0} max={100} value={data.hitRate} onChange={e => onUpdate({ hitRate: Number(e.target.value) })} /></Field>
-      <Field label="Max QPS"><Input type="number" min={1} value={data.maxQPS} onChange={e => onUpdate({ maxQPS: Number(e.target.value) })} /></Field>
-      <div style={{ fontSize: 11, color: '#64748b', background: '#0a1628', borderRadius: 6, padding: '6px 10px', marginBottom: 14 }}>
-        {data.hitRate}% cache hits — only {100 - data.hitRate}% reach downstream
+      <LabelField nodeId={id} value={data.label} onUpdate={onUpdate} />
+      <SelectField id={`cfg-${id}-dbType`} label="DB type" value={data.dbType}
+        options={[['postgres', 'PostgreSQL'], ['mysql', 'MySQL'], ['mongodb', 'MongoDB'], ['redis-db', 'Redis']]}
+        onChange={v => onUpdate({ dbType: v })} />
+      <NodeNumber nodeId={id} kind="database" field="maxReadQPS" label="Max read QPS (per node)" value={data.maxReadQPS} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="database" field="maxWriteQPS" label="Max write QPS (primary)" value={data.maxWriteQPS} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="database" field="readReplicas" label="Read replicas" value={data.readReplicas} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="database" field="readRatio" label="Read ratio (% reads)" value={data.readRatio} onUpdate={onUpdate} />
+      <div style={hintStyle}>
+        Reads go to the primary and replicas; writes go to the primary only.
+        {data.readUtilization != null && data.writeUtilization != null && (
+          <> Read path {pct(data.readUtilization)}, write path {pct(data.writeUtilization)}.</>
+        )}
       </div>
-      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
-      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="1" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+      <ReliabilityFields nodeId={id} kind="database" data={data} onUpdate={onUpdate} />
     </>
   );
 }
 
-function QueueConfig({ data, onUpdate }: { data: QueueData; onUpdate: (p: Partial<NodeData>) => void }) {
+function CacheConfig({ id, data, onUpdate }: { id: string; data: CacheData; onUpdate: Update }) {
   return (
     <>
-      <Field label="Label"><Input value={data.label} onChange={e => onUpdate({ label: e.target.value })} /></Field>
-      <Field label="Queue Type">
-        <Select value={data.queueType} onChange={e => onUpdate({ queueType: e.target.value as QueueData['queueType'] })}>
-          <option value="kafka">Kafka</option>
-          <option value="rabbitmq">RabbitMQ</option>
-          <option value="sqs">Amazon SQS</option>
-        </Select>
-      </Field>
-      <Field label="Throughput (msg/s per consumer)"><Input type="number" min={1} value={data.maxThroughput} onChange={e => onUpdate({ maxThroughput: Number(e.target.value) })} /></Field>
-      <Field label="Consumers"><Input type="number" min={1} value={data.consumers} onChange={e => onUpdate({ consumers: Number(e.target.value) })} /></Field>
-      <div style={{ fontSize: 11, color: '#22d3ee', background: '#0a1628', borderRadius: 6, padding: '6px 10px', marginBottom: 14 }}>
-        Total capacity: {(data.maxThroughput * data.consumers).toLocaleString()} msg/s
+      <LabelField nodeId={id} value={data.label} onUpdate={onUpdate} />
+      <SelectField id={`cfg-${id}-cacheType`} label="Cache type" value={data.cacheType}
+        options={[['redis', 'Redis'], ['memcached', 'Memcached'], ['cdn', 'CDN']]}
+        onChange={v => onUpdate({ cacheType: v })} />
+      <NodeNumber nodeId={id} kind="cache" field="hitRate" label="Hit rate (%)" value={data.hitRate} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="cache" field="maxQPS" label="Max QPS" value={data.maxQPS} onUpdate={onUpdate} />
+      <div style={hintStyle}>
+        {data.hitRate}% of requests are served here; {100 - data.hitRate}% go downstream.
       </div>
-      <Field label="Error Rate (%)"><Input type="number" min={0} max={100} value={data.errorRate ?? 0} onChange={e => onUpdate({ errorRate: Number(e.target.value) })} /></Field>
-      <Field label="Base Latency (ms)"><Input type="number" min={0} placeholder="5" value={data.baseLatencyMs ?? ''} onChange={e => onUpdate({ baseLatencyMs: e.target.value === '' ? undefined : Number(e.target.value) })} /></Field>
+      <ReliabilityFields nodeId={id} kind="cache" data={data} onUpdate={onUpdate} />
     </>
   );
 }
 
-function fmtQPS(qps: number): string {
-  if (qps >= 1000) return `${(qps / 1000).toFixed(1)}k/s`;
-  return `${qps.toFixed(0)}/s`;
+function QueueConfig({ id, data, onUpdate }: { id: string; data: QueueData; onUpdate: Update }) {
+  return (
+    <>
+      <LabelField nodeId={id} value={data.label} onUpdate={onUpdate} />
+      <SelectField id={`cfg-${id}-queueType`} label="Queue type" value={data.queueType}
+        options={[['kafka', 'Kafka'], ['rabbitmq', 'RabbitMQ'], ['sqs', 'Amazon SQS']]}
+        onChange={v => onUpdate({ queueType: v })} />
+      <NodeNumber nodeId={id} kind="queue" field="maxThroughput" label="Throughput (msg/s per consumer)" value={data.maxThroughput} onUpdate={onUpdate} />
+      <NodeNumber nodeId={id} kind="queue" field="consumers" label="Consumers" value={data.consumers} onUpdate={onUpdate} />
+      {data.capacity != null && (
+        <div style={hintStyle}>
+          Drains {formatQPS(data.capacity).replace('/s', ' msg/s')}. Messages above that build a backlog instead of failing.
+          {(data.backlogQPS ?? 0) > 0 && <> Backlog grows by {formatQPS(data.backlogQPS!).replace('/s', ' msg/s')}.</>}
+        </div>
+      )}
+      <ReliabilityFields nodeId={id} kind="queue" data={data} onUpdate={onUpdate} />
+    </>
+  );
 }
 
-function EdgeConfigPanel() {
-  const { edges, selectedEdgeId, updateEdgeData } = useDiagramStore();
-  const edge = edges.find(e => e.id === selectedEdgeId);
+/** How the source's output is shared out: drives the Edge Config warnings (#3, #11). */
+function useAllocationSummary(sourceId: string | undefined) {
+  const edges = useDiagramStore(s => s.edges);
+  return useMemo(() => {
+    let percent = 0, auto = 0, absolute = 0;
+    for (const e of edges) {
+      if (e.source !== sourceId) continue;
+      const d = e.data as EdgeData | undefined;
+      const mode = d?.distributionMode ?? 'auto';
+      if (mode === 'percent') percent += clampField(Number(d?.distributionValue ?? 0), EDGE_FIELD_LIMITS.percent);
+      else if (mode === 'absolute') absolute++;
+      else auto++;
+    }
+    return { percent, auto, absolute };
+  }, [edges, sourceId]);
+}
+
+function EdgeConfigPanel({ edgeId }: { edgeId: string }) {
+  const edge = useDiagramStore(s => s.edges.find(e => e.id === edgeId));
+  const updateEdgeData = useDiagramStore(s => s.updateEdgeData);
+  const sourceLabel = useDiagramStore(s => s.nodes.find(n => n.id === edge?.source)?.data.label);
+  const target = useDiagramStore(s => s.nodes.find(n => n.id === edge?.target)?.data);
+  const sourceUnallocated = useDiagramStore(s => (s.nodes.find(n => n.id === edge?.source)?.data as { unallocatedQPS?: number } | undefined)?.unallocatedQPS ?? 0);
+  const summary = useAllocationSummary(edge?.source);
   if (!edge) return null;
 
   const d = (edge.data as EdgeData | undefined) ?? { distributionMode: 'auto' as const };
   const onUpdate = (patch: Partial<EdgeData>) => updateEdgeData(edge.id, patch);
+  const computed = d.computedQPS;
+  const src = sourceLabel ?? 'the source';
+  const now = computed != null ? ` Now carrying ${formatQPS(computed)}.` : '';
+  const remaining = Math.max(0, 100 - summary.percent);
 
-  const computed = d.computedQPS ?? 0;
-
-  const infoText: string = d.distributionMode === 'auto'
-    ? computed > 0
-      ? `Splits load equally among all auto edges from this source. Currently sending ${fmtQPS(computed)} through this edge.`
-      : 'Splits load equally among all auto edges from this source. Run Analyze to see actual QPS.'
+  const infoText = d.distributionMode === 'auto'
+    ? `Shares what ${src} sends after any percent and absolute connections, split equally across its ${summary.auto} auto connection${summary.auto === 1 ? '' : 's'}.${now}`
     : d.distributionMode === 'percent'
-    ? `This edge carries a fixed ${d.distributionValue ?? 0}% of the source's outgoing QPS${computed > 0 ? ` — currently ~${fmtQPS(computed)}` : ''}.`
-    : `This edge is hard-capped at ${d.distributionValue ?? 0} QPS regardless of source load — excess is absorbed by other edges.`;
+    ? `Takes ${d.distributionValue ?? 0}% of what ${src} sends after any absolute connections.${now}`
+    : `Carries at most ${formatQPS(d.distributionValue ?? 0)}, retries included. If ${src}'s caps add up to more than it sends, they are scaled down together; anything left goes to its auto connections.${now}`;
+
+  const targetError = (target as { errorRatePct?: number; errorRate?: number } | undefined);
+  const errorPct = targetError?.errorRatePct ?? targetError?.errorRate ?? 0;
+  const retries = d.retryCount ?? 0;
+  const attempts = expectedAttempts(errorPct / 100, retries);
 
   return (
     <>
-      <Field label="Endpoint Label">
-        <Input
-          value={d.label ?? ''}
-          placeholder="e.g. GET /users"
-          onChange={e => onUpdate({ label: e.target.value || undefined })}
-        />
-      </Field>
-      <Field label="Distribution">
-        <Select value={d.distributionMode} onChange={e => onUpdate({ distributionMode: e.target.value as EdgeData['distributionMode'] })}>
-          <option value="auto">Auto (equal split)</option>
-          <option value="percent">Percentage of source</option>
-          <option value="absolute">Absolute QPS cap</option>
-        </Select>
-      </Field>
+      <TextField id={`cfg-${edge.id}-label`} label="Endpoint label" value={d.label ?? ''} placeholder="e.g. GET /users"
+        onChange={v => onUpdate({ label: v || undefined })} />
+      <SelectField id={`cfg-${edge.id}-mode`} label="Distribution" value={d.distributionMode}
+        options={[['auto', 'Auto (equal split)'], ['percent', 'Percentage of source'], ['absolute', 'Absolute QPS cap']]}
+        onChange={v => onUpdate({ distributionMode: v })} />
       {d.distributionMode !== 'auto' && (
-        <Field label={d.distributionMode === 'percent' ? 'Percentage (0–100)' : 'QPS cap'}>
-          <Input
-            type="number"
-            min={0}
-            max={d.distributionMode === 'percent' ? 100 : undefined}
-            value={d.distributionValue ?? 0}
-            onChange={e => onUpdate({ distributionValue: Number(e.target.value) })}
-          />
-        </Field>
-      )}
-      <div style={{ fontSize: 11, color: '#64748b', background: '#0a1628', borderRadius: 6, padding: '6px 10px', marginBottom: 14, lineHeight: 1.6 }}>
-        {infoText}
-      </div>
-      <Field label="Retries on error">
-        <Input
-          type="number"
-          min={0}
-          max={5}
-          value={d.retryCount ?? 0}
-          onChange={e => onUpdate({ retryCount: Number(e.target.value) })}
+        <NumberField
+          key={d.distributionMode}
+          id={`cfg-${edge.id}-value`}
+          label={d.distributionMode === 'percent' ? 'Percentage (0–100)' : 'QPS cap'}
+          value={d.distributionValue ?? 0}
+          limit={EDGE_FIELD_LIMITS[d.distributionMode]}
+          onChange={v => onUpdate({ distributionValue: v ?? 0 })}
         />
-      </Field>
+      )}
+      <div style={hintStyle}>{infoText}</div>
+      {summary.percent > 100 && (
+        <div style={warnStyle} role="status">
+          Percent connections from {src} add up to {+summary.percent.toFixed(1)}%. They are scaled down to fit 100%.
+        </div>
+      )}
+      {summary.percent > 0 && summary.percent <= 100 && (
+        <div style={hintStyle}>
+          Percent connections from {src}: {+summary.percent.toFixed(1)}%.{' '}
+          {summary.auto > 0
+            ? `Auto connections share the remaining ${+remaining.toFixed(1)}%.`
+            : remaining > 0 ? `The remaining ${+remaining.toFixed(1)}% is not sent anywhere.` : ''}
+        </div>
+      )}
+      {sourceUnallocated > 0 && (
+        <div style={warnStyle} role="status">
+          {formatQPS(sourceUnallocated)} from {src} is not sent on any connection. Add an auto connection to carry the rest, or that traffic ends at {src}.
+        </div>
+      )}
+      <NumberField
+        id={`cfg-${edge.id}-retries`}
+        label="Retries on error"
+        value={retries}
+        limit={EDGE_FIELD_LIMITS.retryCount}
+        onChange={v => onUpdate({ retryCount: v ?? 0 })}
+      />
+      {retries > 0 && (
+        <div style={hintStyle}>
+          Each request costs 1 + e + … + e<sup>{retries}</sup> attempts, e = the target's error rate
+          (now {errorPct < 1 ? errorPct.toFixed(1) : errorPct.toFixed(0)}%): ×{attempts.toFixed(2)} load. Overload raises e, so retries can compound.
+        </div>
+      )}
     </>
   );
 }
 
-const panelShell = (title: string, children: React.ReactNode) => (
-  <div style={{
-    width: 240, background: '#111827', borderLeft: '1px solid #1e2d45',
-    display: 'flex', flexDirection: 'column', overflow: 'hidden',
-  }}>
-    <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid #1e2d45' }}>
-      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-        {title}
+function NodeConfig({ nodeId }: { nodeId: string }) {
+  const data = useDiagramStore(s => s.nodes.find(n => n.id === nodeId)?.data);
+  const updateNodeData = useDiagramStore(s => s.updateNodeData);
+  if (!data) return null;
+  const onUpdate: Update = patch => updateNodeData(nodeId, patch);
+  switch (data.kind) {
+    case 'loadGenerator': return <LoadGeneratorConfig id={nodeId} data={data} onUpdate={onUpdate} />;
+    case 'loadBalancer':  return <LoadBalancerConfig  id={nodeId} data={data} onUpdate={onUpdate} />;
+    case 'server':        return <ServerConfig        id={nodeId} data={data} onUpdate={onUpdate} />;
+    case 'database':      return <DatabaseConfig      id={nodeId} data={data} onUpdate={onUpdate} />;
+    case 'cache':         return <CacheConfig         id={nodeId} data={data} onUpdate={onUpdate} />;
+    case 'queue':         return <QueueConfig         id={nodeId} data={data} onUpdate={onUpdate} />;
+  }
+}
+
+function EmptyState() {
+  return (
+    <div style={{ textAlign: 'center', padding: '24px 4px' }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }} aria-hidden="true">🔍</div>
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
+        No selection
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+        Click a node or connection to configure it.
       </div>
     </div>
-    <div style={{ flex: 1, overflowY: 'auto', padding: '14px' }} className="scrollbar-thin">
-      {children}
-    </div>
-  </div>
-);
+  );
+}
 
 export function ConfigPanel() {
-  const { nodes, selectedNodeId, selectedEdgeId, updateNodeData } = useDiagramStore();
-  const selectedNode = nodes.find(n => n.id === selectedNodeId);
+  const selectedNodeId = useDiagramStore(s => s.selectedNodeId);
+  const selectedEdgeId = useDiagramStore(s => s.selectedEdgeId);
+  const nodeExists = useDiagramStore(s => s.selectedNodeId != null && s.nodes.some(n => n.id === s.selectedNodeId));
 
-  if (selectedEdgeId) {
-    return panelShell('Edge Config', <EdgeConfigPanel />);
-  }
+  const title = selectedEdgeId ? 'Edge Config' : nodeExists ? 'Configure' : 'Config';
 
-  if (!selectedNode) {
-    return (
-      <div style={{
-        width: 240, background: '#111827', borderLeft: '1px solid #1e2d45',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: 24, textAlign: 'center',
-      }}>
-        <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
-        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 8 }}>
-          No selection
-        </div>
-        <div style={{ fontSize: 11, color: '#334155', lineHeight: 1.5 }}>
-          Click a node or edge to configure its properties.
-        </div>
-        <AdBanner slot="5483690415" format="rectangle"
-          style={{ width: 200, minHeight: 200, margin: '16px auto 0' }} />
+  // The panel and its single ad slot stay mounted whatever is selected, so selecting
+  // and deselecting never re-requests an ad (#73).
+  return (
+    <aside
+      aria-label="Configuration"
+      style={{
+        width: 240, background: 'var(--bg-surface)', borderLeft: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}
+    >
+      <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border)' }}>
+        <h2 style={{ margin: 0, fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {title}
+        </h2>
       </div>
-    );
-  }
-
-  const { data } = selectedNode;
-  const onUpdate = (patch: Partial<NodeData>) => updateNodeData(selectedNode.id, patch);
-
-  return panelShell('Configure', <>
-    {data.kind === 'loadGenerator' && <LoadGeneratorConfig data={data as LoadGeneratorData} onUpdate={onUpdate} />}
-    {data.kind === 'loadBalancer'  && <LoadBalancerConfig  data={data as LoadBalancerData}  onUpdate={onUpdate} />}
-    {data.kind === 'server'        && <ServerConfig        data={data as ServerData}         onUpdate={onUpdate} />}
-    {data.kind === 'database'      && <DatabaseConfig      data={data as DatabaseData}       onUpdate={onUpdate} />}
-    {data.kind === 'cache'         && <CacheConfig         data={data as CacheData}          onUpdate={onUpdate} />}
-    {data.kind === 'queue'         && <QueueConfig         data={data as QueueData}          onUpdate={onUpdate} />}
-  </>);
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px' }} className="scrollbar-thin">
+        {selectedEdgeId
+          ? <EdgeConfigPanel key={selectedEdgeId} edgeId={selectedEdgeId} />
+          : nodeExists && selectedNodeId
+          ? <NodeConfig key={selectedNodeId} nodeId={selectedNodeId} />
+          : <EmptyState />}
+      </div>
+      <AdBanner slot="5483690415" format="rectangle" style={{ width: 200, minHeight: 200, margin: '0 auto 12px', flexShrink: 0 }} />
+    </aside>
+  );
 }
