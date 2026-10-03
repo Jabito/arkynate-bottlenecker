@@ -335,6 +335,7 @@ function ActiveLesson() {
 
 function Workspace() {
   useDeepLinks();
+  const [bottomAdFilled, setBottomAdFilled] = useState(false);
   return (
     <ReactFlowProvider>
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 50px)', overflow: 'hidden' }}>
@@ -345,8 +346,11 @@ function Workspace() {
           <ConfigPanel />
         </div>
         {/* Fixed-height slot: the canvas never resizes when the ad fills. */}
-        <div style={{ height: 90, flexShrink: 0, overflow: 'hidden', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)' }}>
-          <AdBanner slot="1205058699" format="horizontal" style={{ height: 90 }} />
+        {/* Takes space only once an ad is served (ruling 5); unfilled, the canvas keeps the room (#74) */}
+        <div style={bottomAdFilled
+          ? { height: 90, flexShrink: 0, overflow: 'hidden', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)' }
+          : { flexShrink: 0 }}>
+          <AdBanner slot="1205058699" format="horizontal" style={{ height: 90 }} onFilledChange={setBottomAdFilled} />
         </div>
         <AnalysisBar />
       </div>

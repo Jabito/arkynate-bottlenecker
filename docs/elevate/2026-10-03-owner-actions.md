@@ -75,6 +75,10 @@ Create an IAM role trusting `token.actions.githubusercontent.com` for `repo:Jabi
 - Check whether the site is approved and ads are serving: every slot showed `data-ad-status` unfilled on 2026-10-03.
 - Decide whether Auto ads may place anchor or vignette ads over the playground canvas. If not, exclude `/playground` in Auto ads → URL exclusions.
 - The new `/privacy` page describes what is collected. Link it in the AdSense site settings.
+- **Likely reason no ads serve (found in the final pass on 2026-10-03, not yet proven on live).** Since `3aa069f` (2026-03-17), `AdBanner` wraps every slot in `display: none` until Google reports it filled. A hidden slot has width 0, so AdSense can't size it, and on localhost those slots are never requested (`data-ad-status` stays null, as it did on live). Collapsing with `height: 0` instead does get them requested (status becomes `unfilled`/`filled`). But AdSense then writes `height: auto !important` onto the slot's ancestors, which breaks the playground's full-height layout (seen on 7 containers, including both sidebars). The code still uses `display: none`. To fix it on live:
+  1. Change the `AdBanner` wrapper to `height: 0; overflow: hidden` while unfilled.
+  2. Stop AdSense resizing the layout: give each slot a dedicated fixed-size box (for example the sidebar slots `height: 250px; overflow: hidden`), or keep a small MutationObserver on the playground root that removes `height` overrides on its own layout containers.
+  3. Test on the live domain (ads never fill on localhost) and watch `data-ad-status` plus the playground layout at 1100 px and 1440 px.
 
 ## 6. S3 bucket access (owner question 12)
 

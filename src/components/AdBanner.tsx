@@ -14,10 +14,12 @@ interface AdBannerProps {
   slot: string;
   format?: string;
   style?: React.CSSProperties;
+  /** Called when Google reports the slot filled or unfilled. */
+  onFilledChange?: (filled: boolean) => void;
 }
 
 /** An AdSense slot that stays collapsed until Google reports it filled. */
-export function AdBanner({ slot, format = 'auto', style }: AdBannerProps) {
+export function AdBanner({ slot, format = 'auto', style, onFilledChange }: AdBannerProps) {
   const initialized = useRef(false);
   const insRef = useRef<HTMLModElement>(null);
   const [filled, setFilled] = useState(false);
@@ -27,11 +29,13 @@ export function AdBanner({ slot, format = 'auto', style }: AdBannerProps) {
     if (!ins) return;
 
     const observer = new MutationObserver(() => {
-      setFilled(ins.getAttribute('data-ad-status') === 'filled');
+      const isFilled = ins.getAttribute('data-ad-status') === 'filled';
+      setFilled(isFilled);
+      onFilledChange?.(isFilled);
     });
     observer.observe(ins, { attributes: true, attributeFilter: ['data-ad-status'] });
     return () => observer.disconnect();
-  }, []);
+  }, [onFilledChange]);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -44,6 +48,8 @@ export function AdBanner({ slot, format = 'auto', style }: AdBannerProps) {
   }, []);
 
   return (
+    // NOTE: display:none hides the slot from AdSense's width check, so it is likely never
+    // requested; see docs/elevate/2026-10-03-owner-actions.md §5 before changing this.
     <div style={{ display: filled ? 'block' : 'none', ...style }}>
       <ins
         ref={insRef}
