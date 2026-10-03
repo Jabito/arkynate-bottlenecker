@@ -16,7 +16,7 @@ Live at: **https://bottlenecker.arkynate.com**
 
 - **Visual canvas** — drag-and-drop nodes for load generators, load balancers, servers, databases, caches and queues
 - **Load simulation** — a load generator emits QPS that propagates through your architecture; the simulation re-runs on every change
-- **Bottleneck detection** — nodes turn yellow (> 70 %), orange (> 90 %) and red (≥ 100 % of capacity); the analysis bar lists results and warnings
+- **Bottleneck detection** — nodes turn yellow (> 70 %), orange (> 90 %) and red (≥ 100 % of capacity); the analysis bar lists results, warnings, the critical (slowest) request path, mean latency and end-to-end success rate
 - **Overload, errors and retries** — saturated nodes shed what they can't serve, configured error rates and retries amplify upstream load
 - **Edge distribution** — split traffic by percentage, absolute QPS, or an even split of what is left
 - **Lessons** — real-world bottleneck scenarios you can open on the canvas

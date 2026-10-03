@@ -9,6 +9,7 @@ before they hit production. No signup required.
   and each component has a capacity limit
 - Bottleneck detection: utilisation is re-computed on every change; overloaded nodes turn red
 - Error rate & latency modeling: see downstream cascade effects
+- Critical path: the slowest request path, with mean latency and end-to-end success rate
 - Retry amplification simulation: model retry storms behind failing components
 
 ## Who It's For
