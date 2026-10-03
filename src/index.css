@@ -423,9 +423,12 @@ body {
   display: inline-block;
 }
 
+.bn-lesson-card { transition: border-color 0.2s; }
+.bn-lesson-card:hover { border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
+
 /* Generic link hover used by Home/Lessons/Privacy */
-.bn-link { color: var(--text-dim); text-decoration: none; transition: color 0.15s; }
-.bn-link:hover { color: var(--text-muted); }
+.bn-link { color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+.bn-link:hover { color: var(--text-strong); }
 
 @media (prefers-reduced-motion: reduce) {
   .bn-spinner { animation-duration: 2.4s; }
