@@ -3,7 +3,12 @@ import { persist } from 'zustand/middleware';
 
 export type Theme = 'dark' | 'light' | 'matrix';
 
-function applyTheme(theme: Theme) {
+/**
+ * Puts the theme class on <body>. The Navbar calls this with the stored theme
+ * on /playground and with 'dark' everywhere else, so the content pages always
+ * render with the dark tokens (#17).
+ */
+export function applyTheme(theme: Theme) {
   const body = document.body;
   Array.from(body.classList)
     .filter(c => c.startsWith('theme-'))
@@ -22,17 +27,11 @@ export const useThemeStore = create<ThemeStore>()(
   persist(
     (set) => ({
       theme: 'dark',
-      setTheme: (theme) => {
-        applyTheme(theme);
-        set({ theme });
-      },
+      setTheme: (theme) => set({ theme }),
     }),
     {
       name: 'bottlenecker-theme',
       partialize: (state) => ({ theme: state.theme }),
-      onRehydrateStorage: () => (state) => {
-        if (state?.theme) applyTheme(state.theme);
-      },
     }
   )
 );

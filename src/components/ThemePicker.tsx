@@ -1,117 +1,94 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useThemeStore } from '../store/themeStore';
 import type { Theme } from '../store/themeStore';
 
+// Swatches preview each theme, so they keep that theme's own literal colours.
 const THEMES: { id: Theme; name: string; bg: string; accent: string }[] = [
   { id: 'dark',   name: 'Dark',   bg: '#0a0f1e', accent: '#22d3ee' },
   { id: 'light',  name: 'Light',  bg: '#f8fafc', accent: '#0891b2' },
   { id: 'matrix', name: 'Matrix', bg: '#001400', accent: '#00ff41' },
 ];
 
-export function ThemePicker() {
-  const { theme, setTheme } = useThemeStore();
+export function ThemePicker({ inMenu = false }: { inMenu?: boolean }) {
+  const theme = useThemeStore(s => s.theme);
+  const setTheme = useThemeStore(s => s.setTheme);
   const [open, setOpen] = useState(false);
-  const [hov, setHov] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const current = THEMES.find(t => t.id === theme) ?? THEMES[0];
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDown);
+    };
+  }, [open]);
+
+  const options = THEMES.map(t => (
+    <button
+      key={t.id}
+      role="menuitemradio"
+      aria-checked={t.id === theme}
+      className="bn-menuitem"
+      onClick={() => { setTheme(t.id); setOpen(false); }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: t.id === theme ? 'var(--bg-elevated)' : undefined,
+        color: t.id === theme ? 'var(--text-strong)' : 'var(--text-muted)',
+      }}
+    >
+      <span style={{
+        width: 16, height: 16, borderRadius: 3, background: t.bg,
+        border: `2px solid ${t.accent}`, display: 'inline-block', flexShrink: 0,
+      }} />
+      {t.name}
+      {t.id === theme && <span style={{ marginLeft: 'auto', color: 'var(--accent)', fontSize: 11 }}>✓</span>}
+    </button>
+  ));
+
+  // Inside an overflow menu: render the options inline, no nested popover.
+  if (inMenu) {
+    return (
+      <div role="group" aria-label="Colour theme">
+        <div className="bn-menu-label" style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 10 }}>
+          Colour theme
+        </div>
+        {options}
+      </div>
+    );
+  }
+
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={rootRef} style={{ position: 'relative' }}>
       <button
+        className="bn-navbtn"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Colour theme: ${current.name}`}
         onClick={() => setOpen(s => !s)}
-        onMouseEnter={() => setHov(true)}
-        onMouseLeave={() => setHov(false)}
-        style={{
-          background: hov ? '#1a2235' : 'transparent',
-          border: `1px solid ${hov ? '#1e2d45' : 'transparent'}`,
-          borderRadius: 6,
-          color: '#94a3b8',
-          padding: '5px 12px',
-          fontSize: 12,
-          fontFamily: "'Space Grotesk', sans-serif",
-          fontWeight: 500,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          transition: 'all 0.15s',
-          whiteSpace: 'nowrap',
-        }}
+        style={{ gap: 6 }}
       >
         <span style={{
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          background: current.accent,
-          display: 'inline-block',
-          flexShrink: 0,
-          boxShadow: `0 0 6px ${current.accent}`,
+          width: 10, height: 10, borderRadius: '50%', background: current.accent,
+          display: 'inline-block', flexShrink: 0, boxShadow: `0 0 6px ${current.accent}`,
         }} />
         Theme
       </button>
 
       {open && (
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
-            onClick={() => setOpen(false)}
-          />
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            marginTop: 4,
-            background: '#111827',
-            border: '1px solid #1e2d45',
-            borderRadius: 8,
-            padding: 8,
-            width: 160,
-            zIndex: 50,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          }}>
-            <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8, padding: '0 4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Color theme
-            </div>
-            {THEMES.map(t => (
-              <button
-                key={t.id}
-                onClick={() => { setTheme(t.id); setOpen(false); }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 8px',
-                  background: t.id === theme ? '#1a2235' : 'transparent',
-                  border: 'none',
-                  borderRadius: 6,
-                  color: t.id === theme ? '#f1f5f9' : '#94a3b8',
-                  fontSize: 12,
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'background 0.1s',
-                }}
-                onMouseEnter={e => { if (t.id !== theme) e.currentTarget.style.background = '#1a2235'; }}
-                onMouseLeave={e => { if (t.id !== theme) e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 3,
-                  background: t.bg,
-                  border: `2px solid ${t.accent}`,
-                  display: 'inline-block',
-                  flexShrink: 0,
-                }} />
-                {t.name}
-                {t.id === theme && (
-                  <span style={{ marginLeft: 'auto', color: '#22d3ee', fontSize: 11 }}>✓</span>
-                )}
-              </button>
-            ))}
+        <div role="menu" aria-label="Colour theme" className="bn-menu" style={{ width: 160 }}>
+          <div className="bn-menu-label" style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 10 }}>
+            Colour theme
           </div>
-        </>
+          {options}
+        </div>
       )}
     </div>
   );
