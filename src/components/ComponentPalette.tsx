@@ -36,7 +36,7 @@ const ITEMS: PaletteItem[] = [
     defaultData: NODE_DEFAULTS.database,
   },
   {
-    kind: 'cache', icon: '🔴', label: 'Cache', color: '#22d3ee',
+    kind: 'cache', icon: '🗃️', label: 'Cache', color: '#22d3ee',
     description: 'Redis, Memcached, or CDN',
     defaultData: NODE_DEFAULTS.cache,
   },
