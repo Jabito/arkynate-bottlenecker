@@ -7,7 +7,6 @@ import { TEMPLATES } from '../data/templates';
 import { ThemePicker } from './ThemePicker';
 
 const SITE = 'https://bottlenecker.arkynate.com';
-const ROUTES = ['/', '/components', '/lessons', '/playground', '/privacy'];
 const SUPPORT_URL = 'https://www.paypal.com/paypalme/kingJabito';
 const ISSUES_URL = 'https://github.com/Jabito/arkynate-bottlenecker/issues';
 
@@ -200,7 +199,7 @@ export function Navbar() {
   // Per-route canonical + og:url (#21).
   useEffect(() => {
     const path = location.pathname.replace(/\/+$/, '') || '/';
-    const url = SITE + (ROUTES.includes(path) ? path : '/');
+    const url = SITE + path; // unknown paths render a noindex 404, not a duplicate of Home
     document.querySelector('link[rel="canonical"]')?.setAttribute('href', url);
     document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
   }, [location.pathname]);
