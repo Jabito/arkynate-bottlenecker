@@ -67,7 +67,7 @@ Open [http://localhost:5173](http://localhost:5173). All environment variables a
 
 ## Deployment
 
-Production is a static site on S3 behind CloudFront. Every pull request runs CI (`.github/workflows/ci.yml`: lint, typecheck, test, build). A push to `main` runs the same checks and then deploys (`.github/workflows/deploy.yml` → `deploy.sh`): hashed `assets/` are cached for a year, root files for an hour, and `index.html` is never cached; then CloudFront is invalidated.
+Production is a static site on S3 behind CloudFront. Every pull request runs CI (`.github/workflows/ci.yml`: lint, typecheck, test, build). A push to `main` runs the same checks and then deploys (`.github/workflows/deploy.yml` → `deploy.sh`): hashed `assets/` are cached for a year and kept for 30 days after they leave the build (open tabs can still lazy-load them), root files are cached for an hour, and `index.html` is never cached; then CloudFront is invalidated.
 
 `deploy.sh` can also be run by hand with `S3_BUCKET` and `CF_DISTRIBUTION_ID` set.
 
