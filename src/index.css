@@ -19,7 +19,8 @@
   --text-strong: #f1f5f9;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
-  --accent: var(--cyan);
+  /* Each theme sets --accent itself: var(--cyan) here would resolve on :root only. */
+  --accent: #22d3ee;
   --accent-strong: #0891b2;
   --on-accent: #ffffff;
   --st-healthy: #22c55e;
@@ -48,6 +49,7 @@ body.theme-light {
   --bg-nav: #ffffff;
   --border: #d5dde8;
   --cyan: #0891b2;
+  --accent: #0891b2;
   --purple: #7c3aed;
   --green: #16a34a;
   --yellow: #ca8a04;
@@ -79,6 +81,7 @@ body.theme-matrix {
   --bg-nav: #000a00;
   --border: #005200;
   --cyan: #00ff41;
+  --accent: #00ff41;
   --purple: #00cc33;
   --green: #00ff41;
   /* warm hues stay warm so stressed nodes never read as healthy (#18) */
