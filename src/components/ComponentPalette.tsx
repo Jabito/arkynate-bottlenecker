@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import type { Node } from '@xyflow/react';
 import type { NodeKind, NodeData } from '../types';
+import { NODE_DEFAULTS } from '../data/nodeDefaults';
 import { useDiagramStore } from '../store/diagramStore';
 import { AdBanner } from './AdBanner';
 
@@ -17,32 +18,32 @@ const ITEMS: PaletteItem[] = [
   {
     kind: 'loadGenerator', icon: '⚡', label: 'Load Generator', color: '#a855f7',
     description: 'Defines incoming traffic source',
-    defaultData: () => ({ kind: 'loadGenerator', label: 'Load Generator', outputQPS: 1000 }),
+    defaultData: NODE_DEFAULTS.loadGenerator,
   },
   {
     kind: 'loadBalancer', icon: '⚖️', label: 'Load Balancer', color: '#22d3ee',
     description: 'Distributes traffic across targets',
-    defaultData: () => ({ kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 5000, strategy: 'round-robin' }),
+    defaultData: NODE_DEFAULTS.loadBalancer,
   },
   {
     kind: 'server', icon: '🖥️', label: 'Server / API', color: '#22d3ee',
     description: 'API server or microservice',
-    defaultData: () => ({ kind: 'server', label: 'API Server', maxQPS: 500, instances: 1 }),
+    defaultData: NODE_DEFAULTS.server,
   },
   {
     kind: 'database', icon: '🗄️', label: 'Database', color: '#f59e0b',
     description: 'Relational or document store',
-    defaultData: () => ({ kind: 'database', label: 'Database', dbType: 'postgres', maxReadQPS: 1000, maxWriteQPS: 300, readReplicas: 0, readRatio: 70 }),
+    defaultData: NODE_DEFAULTS.database,
   },
   {
     kind: 'cache', icon: '🔴', label: 'Cache', color: '#22d3ee',
     description: 'Redis, Memcached, or CDN',
-    defaultData: () => ({ kind: 'cache', label: 'Redis Cache', cacheType: 'redis', hitRate: 80, maxQPS: 50000 }),
+    defaultData: NODE_DEFAULTS.cache,
   },
   {
     kind: 'queue', icon: '📨', label: 'Queue', color: '#8b5cf6',
     description: 'Kafka, RabbitMQ, or SQS',
-    defaultData: () => ({ kind: 'queue', label: 'Message Queue', queueType: 'kafka', maxThroughput: 1000, consumers: 3 }),
+    defaultData: NODE_DEFAULTS.queue,
   },
 ];
 

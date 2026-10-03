@@ -13,6 +13,21 @@
   --yellow: #eab308;
   --orange: #f97316;
   --red: #ef4444;
+  /* Text + semantic tokens (theme contract — every component colours through these) */
+  --text: #e2e8f0;
+  --text-strong: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent: var(--cyan);
+  --st-healthy: #22c55e;
+  --st-warning: #eab308;
+  --st-near: #f97316;
+  --st-critical: #ef4444;
+  --edge: #22d3ee;
+  --edge-selected: #f1f5f9;
+  --edge-label-bg: #111827;
+  --edge-label-fg: #e2e8f0;
+  --overlay: rgba(2, 6, 23, 0.72);
 }
 
 * { box-sizing: border-box; }
@@ -30,6 +45,19 @@ body.theme-light {
   --yellow: #ca8a04;
   --orange: #ea580c;
   --red: #dc2626;
+  --text: #1e293b;
+  --text-strong: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+  --st-healthy: #16a34a;
+  --st-warning: #ca8a04;
+  --st-near: #ea580c;
+  --st-critical: #dc2626;
+  --edge: #0891b2;
+  --edge-selected: #0f172a;
+  --edge-label-bg: #ffffff;
+  --edge-label-fg: #0f172a;
+  --overlay: rgba(15, 23, 42, 0.45);
   color: #0f172a;
 }
 
@@ -44,6 +72,20 @@ body.theme-matrix {
   --yellow: #aaff00;
   --orange: #88ff00;
   --red: #ff0044;
+  --text: #b6ffc6;
+  --text-strong: #e6ffe9;
+  --text-muted: #5fd37a;
+  --text-dim: #2f8f45;
+  /* status keeps distinct hues so stressed nodes never read as healthy */
+  --st-healthy: #00ff41;
+  --st-warning: #ffd400;
+  --st-near: #ff8c00;
+  --st-critical: #ff0044;
+  --edge: #00ff41;
+  --edge-selected: #e6ffe9;
+  --edge-label-bg: #001400;
+  --edge-label-fg: #b6ffc6;
+  --overlay: rgba(0, 0, 0, 0.75);
 }
 
 body.theme-matrix .bn-node-title,
