@@ -59,7 +59,6 @@ const STATUS_COLOR: Record<string, string> = {
   critical: 'var(--st-critical)',
   near:     'var(--st-near)',
   warning:  'var(--st-warning)',
-  healthy:  'var(--st-healthy)',
 };
 
 let idCounter = 1;
@@ -244,7 +243,7 @@ function FlowCanvas() {
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--border)" />
         <Controls />
         <MiniMap
-          nodeColor={(n) => STATUS_COLOR[(n.data as NodeData)?.status ?? ''] ?? 'var(--edge)'}
+          nodeColor={(n) => STATUS_COLOR[(n.data as NodeData)?.status ?? ''] ?? 'var(--accent)'}
           maskColor="var(--overlay)"
           style={{ bottom: 10, right: 10, width: 160, height: 110 }}
         />
@@ -316,7 +315,7 @@ function Workspace() {
           <ConfigPanel />
         </div>
         {/* Fixed-height slot: the canvas never resizes when the ad fills. */}
-        <div style={{ height: 90, flexShrink: 0, overflow: 'hidden', background: 'var(--bg-surface)', borderTop: '1px solid var(--border)' }}>
+        <div style={{ height: 90, flexShrink: 0, overflow: 'hidden', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)' }}>
           <AdBanner slot="1205058699" format="horizontal" style={{ height: 90 }} />
         </div>
         <AnalysisBar />
