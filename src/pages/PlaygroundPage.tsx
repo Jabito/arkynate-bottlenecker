@@ -187,11 +187,31 @@ function FlowCanvas() {
 
   // Fit whenever the whole canvas is replaced. xyflow queues the fit until the new nodes are measured.
   const fittedLoadId = useRef(loadId);
+  const lastLoadAt = useRef(0);
   useEffect(() => {
     if (fittedLoadId.current === loadId) return;
     fittedLoadId.current = loadId;
+    lastLoadAt.current = performance.now();
     fitView({ padding: 0.15, duration: 300 });
   }, [loadId, fitView]);
+
+  // Panes that appear just after a load (the lazily loaded lesson panel) narrow the canvas after that
+  // fit ran, so re-fit when the canvas width changes within a few seconds of a load. Later resizes keep
+  // the user's own pan and zoom.
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    let width = el.clientWidth;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      if (Math.abs(w - width) < 24) return;
+      width = w;
+      if (performance.now() - lastLoadAt.current < 4000) void fitView({ padding: 0.15, duration: 200 });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fitView]);
 
   const handleSelectionChange = useCallback(({ nodes: n, edges: e }: OnSelectionChangeParams) => {
     setSelection(n.map(x => x.id), e.map(x => x.id));
@@ -229,6 +249,7 @@ function FlowCanvas() {
 
   return (
     <div
+      ref={wrapperRef}
       style={{ flex: 1, position: 'relative' }}
       className={selectionBoxVisible ? undefined : 'selection-box-hidden'}
       onDragOver={handleDragOver}
