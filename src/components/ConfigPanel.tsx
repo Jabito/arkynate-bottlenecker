@@ -8,7 +8,7 @@ import { NODE_FIELD_LIMITS, EDGE_FIELD_LIMITS, clampField, type FieldLimit } fro
 import { expectedAttempts } from '../engine/allocation';
 import { DEFAULT_LATENCY_MS } from '../engine/capacity';
 import { formatQPS } from '../engine/format';
-import { AdBanner } from './AdBanner';
+import { AdBanner, AD_SIZES } from './AdBanner';
 
 type Update = (p: Partial<NodeData>) => void;
 
@@ -380,7 +380,7 @@ export function ConfigPanel() {
           ? <NodeConfig key={selectedNodeId} nodeId={selectedNodeId} />
           : <EmptyState />}
       </div>
-      <AdBanner slot="5483690415" format="rectangle" style={{ width: 200, minHeight: 200, margin: '0 auto 12px', flexShrink: 0 }} />
+      <AdBanner slot="5483690415" size={AD_SIZES.smallSquare} style={{ margin: '0 auto 12px', flexShrink: 0 }} />
     </aside>
   );
 }

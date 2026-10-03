@@ -75,10 +75,13 @@ Create an IAM role trusting `token.actions.githubusercontent.com` for `repo:Jabi
 - Check whether the site is approved and ads are serving: every slot showed `data-ad-status` unfilled on 2026-10-03.
 - Decide whether Auto ads may place anchor or vignette ads over the playground canvas. If not, exclude `/playground` in Auto ads → URL exclusions.
 - The new `/privacy` page describes what is collected. Link it in the AdSense site settings.
-- **Likely reason no ads serve (found in the final pass on 2026-10-03, not yet proven on live).** Since `3aa069f` (2026-03-17), `AdBanner` wraps every slot in `display: none` until Google reports it filled. A hidden slot has width 0, so AdSense can't size it, and on localhost those slots are never requested (`data-ad-status` stays null, as it did on live). Collapsing with `height: 0` instead does get them requested (status becomes `unfilled`/`filled`). But AdSense then writes `height: auto !important` onto the slot's ancestors, which breaks the playground's full-height layout (seen on 7 containers, including both sidebars). The code still uses `display: none`. To fix it on live:
-  1. Change the `AdBanner` wrapper to `height: 0; overflow: hidden` while unfilled.
-  2. Stop AdSense resizing the layout: give each slot a dedicated fixed-size box (for example the sidebar slots `height: 250px; overflow: hidden`), or keep a small MutationObserver on the playground root that removes `height` overrides on its own layout containers.
-  3. Test on the live domain (ads never fill on localhost) and watch `data-ad-status` plus the playground layout at 1100 px and 1440 px.
+- **Fixed in 2.3.1 (2026-10-03): the site's own ad slots were never requested.** Since `3aa069f` (2026-03-17), `AdBanner` hid unfilled slots with `display: none`, so AdSense measured a width of 0 and never requested an ad (on live the Lessons slot read `adsbygoogle-status=done` but `data-ad-status=null`). Slots are now fixed-size units (300×250 on content pages, 200×200 in the playground sidebars, 728×90 under the canvas) that collapse by height, not display. Fixed-size units don't rewrite parent heights the way responsive units did, and locally every slot is now requested without touching the playground layout. `ads.txt` was missing on both `arkynate.com` and the subdomain; both now serve `google.com, pub-4792941984956312, DIRECT, f08c47fec0942fa0`.
+- **After the deploy, in the AdSense console:**
+  1. Sites: make sure `arkynate.com` is listed with status **Ready**. A subdomain is covered by its root domain. If it shows "Getting ready" or "Needs attention", request review.
+  2. The "Earnings at risk — ads.txt" warning clears after Google re-crawls `ads.txt` (a few days).
+  3. Ads: check that the seven unit ids in the code (`6844543977`, `5483690415`, `1205058699`, `9084205252`, `7128778727`, `8258027561`, `9246623251`) are Active **display** units. Fixed sizes are set in code, so the unit's own size setting doesn't matter.
+  4. Auto ads: decide whether anchor or vignette ads may cover the playground; exclude `/playground` if not.
+  5. Fill rate is decided by Google, not code: a low-traffic new site often sees "unfilled" for days after approval.
 
 ## 6. S3 bucket access (owner question 12)
 

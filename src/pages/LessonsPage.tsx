@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDiagramStore } from '../store/diagramStore';
 import { LESSONS, type Lesson } from '../data/lessons';
-import { AdBanner } from '../components/AdBanner';
+import { AdBanner, AD_SIZES } from '../components/AdBanner';
 import { lessonHref } from '../lib/deepLinks';
 
 const GRID_MAX = 1680;
@@ -254,8 +254,8 @@ export default function LessonsPage() {
 
       <AdBanner
         slot="9084205252"
-        format="rectangle"
-        style={{ background: 'var(--bg-nav)', borderBottom: '1px solid var(--border)' }}
+        size={AD_SIZES.mediumRectangle}
+        style={{ padding: '16px 0', background: 'var(--bg-nav)', borderBottom: '1px solid var(--border)' }}
       />
 
       {/* Card grid (#20 #87) */}

@@ -3,7 +3,7 @@ import { useReactFlow, type Node } from '@xyflow/react';
 import type { NodeKind, NodeData } from '../types';
 import { NODE_DEFAULTS } from '../data/nodeDefaults';
 import { useDiagramStore } from '../store/diagramStore';
-import { AdBanner } from './AdBanner';
+import { AdBanner, AD_SIZES } from './AdBanner';
 
 interface PaletteItem {
   kind: NodeKind;
@@ -123,8 +123,8 @@ export function ComponentPalette() {
       </div>
       <AdBanner
         slot="6844543977"
-        format="rectangle"
-        style={{ width: '100%', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)', marginTop: 8 }}
+        size={AD_SIZES.smallSquare}
+        style={{ width: '100%', padding: '4px 0', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)', marginTop: 8 }}
       />
     </aside>
   );

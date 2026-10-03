@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AdBanner } from '../components/AdBanner';
+import { AdBanner, AD_SIZES } from '../components/AdBanner';
 
 interface ComponentDef {
   kind: string;
@@ -168,8 +168,8 @@ export default function ComponentsPage() {
       {/* Ad */}
       <AdBanner
         slot="7128778727"
-        format="rectangle"
-        style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
+        size={AD_SIZES.mediumRectangle}
+        style={{ padding: '16px 0', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
       />
 
       {/* Header */}

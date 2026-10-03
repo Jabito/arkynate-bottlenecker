@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { AdBanner } from '../components/AdBanner';
+import { AdBanner, AD_SIZES } from '../components/AdBanner';
 import { getEventCount } from '../lib/analytics';
 import { STATUS_THRESHOLDS } from '../engine/format';
 
@@ -209,8 +209,8 @@ export default function HomePage() {
       {/* Ad */}
       <AdBanner
         slot="8258027561"
-        format="rectangle"
-        style={{ background: 'var(--bg-nav)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}
+        size={AD_SIZES.mediumRectangle}
+        style={{ padding: '16px 0', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}
       />
 
       {/* What is Bottlenecker */}
@@ -296,8 +296,8 @@ export default function HomePage() {
 
       <AdBanner
         slot="9246623251"
-        format="rectangle"
-        style={{ background: 'var(--bg-nav)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}
+        size={AD_SIZES.mediumRectangle}
+        style={{ padding: '16px 0', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}
       />
 
       {/* Features grid */}

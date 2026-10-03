@@ -10,16 +10,32 @@ declare global {
 const ADSENSE_CLIENT: string =
   import.meta.env.VITE_ADSENSE_PUB_ID || 'ca-pub-4792941984956312';
 
+/** Standard AdSense display sizes used on the site. */
+export const AD_SIZES = {
+  mediumRectangle: { width: 300, height: 250 },
+  smallSquare:     { width: 200, height: 200 },
+  leaderboard:     { width: 728, height: 90 },
+} as const;
+
 interface AdBannerProps {
   slot: string;
-  format?: string;
+  /** Fixed slot size. Fixed-size units never resize their parents, unlike responsive ones. */
+  size: { width: number; height: number };
+  /** Wrapper style, applied once the slot is filled. */
   style?: React.CSSProperties;
   /** Called when Google reports the slot filled or unfilled. */
   onFilledChange?: (filled: boolean) => void;
 }
 
-/** An AdSense slot that stays collapsed until Google reports it filled. */
-export function AdBanner({ slot, format = 'auto', style, onFilledChange }: AdBannerProps) {
+/**
+ * A fixed-size AdSense slot that takes no space until Google reports it filled (ruling 5).
+ *
+ * While unfilled the wrapper collapses to zero HEIGHT but keeps its width. Never use
+ * display:none here: AdSense measures the slot's available width before requesting an ad,
+ * and a hidden slot (width 0) is never requested at all (live slots sat unrequested from
+ * 2026-03-17 to 2026-10-03 for this reason).
+ */
+export function AdBanner({ slot, size, style, onFilledChange }: AdBannerProps) {
   const initialized = useRef(false);
   const insRef = useRef<HTMLModElement>(null);
   const [filled, setFilled] = useState(false);
@@ -48,17 +64,18 @@ export function AdBanner({ slot, format = 'auto', style, onFilledChange }: AdBan
   }, []);
 
   return (
-    // NOTE: display:none hides the slot from AdSense's width check, so it is likely never
-    // requested; see docs/elevate/2026-10-03-owner-actions.md §5 before changing this.
-    <div style={{ display: filled ? 'block' : 'none', ...style }}>
+    <div
+      data-ad-wrapper={slot}
+      style={filled
+        ? { textAlign: 'center', ...style }
+        : { height: 0, overflow: 'hidden', textAlign: 'center' }}
+    >
       <ins
         ref={insRef}
         className="adsbygoogle"
-        style={{ display: 'block' }}
+        style={{ display: 'inline-block', width: size.width, height: size.height }}
         data-ad-client={ADSENSE_CLIENT}
         data-ad-slot={slot}
-        data-ad-format={format}
-        data-full-width-responsive="true"
       />
     </div>
   );

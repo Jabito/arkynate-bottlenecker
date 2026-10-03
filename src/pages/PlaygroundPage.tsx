@@ -31,7 +31,7 @@ import { QueueNode } from '../nodes/QueueNode';
 import { ComponentPalette } from '../components/ComponentPalette';
 import { ConfigPanel } from '../components/ConfigPanel';
 import { AnalysisBar } from '../components/AnalysisBar';
-import { AdBanner } from '../components/AdBanner';
+import { AdBanner, AD_SIZES } from '../components/AdBanner';
 
 // Lesson data loads only once a lesson is open (#100).
 const LessonPanel = lazy(() => import('../components/LessonPanel'));
@@ -371,7 +371,7 @@ function Workspace() {
         <div style={bottomAdFilled
           ? { height: 90, flexShrink: 0, overflow: 'hidden', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)' }
           : { flexShrink: 0 }}>
-          <AdBanner slot="1205058699" format="horizontal" style={{ height: 90 }} onFilledChange={setBottomAdFilled} />
+          <AdBanner slot="1205058699" size={AD_SIZES.leaderboard} style={{ height: 90 }} onFilledChange={setBottomAdFilled} />
         </div>
         <AnalysisBar />
       </div>
