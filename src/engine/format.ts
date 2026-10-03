@@ -1,8 +1,14 @@
 import type { NodeStatus } from '../types';
 
-/** Utilisation (%) → status. Single source of truth for the thresholds. */
+/** Status thresholds, shared by the engine, node cards, stress test and the legend. */
+export const STATUS_THRESHOLDS = { warning: 70, near: 90, critical: 100 } as const;
+
+/**
+ * Utilisation (%) → status. Single source of truth for the thresholds.
+ * At 100% a queue never drains (M/M/1 latency is unbounded), so 100% is already critical.
+ */
 export function statusOf(utilization: number): NodeStatus {
-  if (utilization > 100) return 'critical';
+  if (utilization >= 100) return 'critical';
   if (utilization > 90)  return 'near';
   if (utilization > 70)  return 'warning';
   return 'healthy';

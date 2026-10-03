@@ -1,8 +1,8 @@
 import type { Node, Edge } from '@xyflow/react';
 import type { NodeData } from '../types';
 
-const edgeStyle = { stroke: '#22d3ee', strokeWidth: 2 };
-const edgeBase = { animated: true, style: edgeStyle, data: { distributionMode: 'auto' as const } };
+// Edge colour comes from the theme tokens (--edge), so no inline stroke here.
+const edgeBase = { animated: true, data: { distributionMode: 'auto' as const } };
 
 export interface Template {
   name: string;
@@ -26,7 +26,7 @@ export const TEMPLATES: Template[] = [
       },
       {
         id: 'db1', type: 'database', position: { x: 700, y: 200 },
-        data: { kind: 'database', label: 'PostgreSQL', dbType: 'postgres', maxReadQPS: 1000, maxWriteQPS: 300, readReplicas: 0, readRatio: 70, errorRate: 1, baseLatencyMs: 15 },
+        data: { kind: 'database', label: 'PostgreSQL', dbType: 'postgres', maxReadQPS: 1000, maxWriteQPS: 400, readReplicas: 0, readRatio: 70, errorRate: 1, baseLatencyMs: 15 },
       },
     ],
     edges: [
@@ -44,7 +44,7 @@ export const TEMPLATES: Template[] = [
       },
       {
         id: 'lb1', type: 'loadBalancer', position: { x: 280, y: 200 },
-        data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 6000, strategy: 'round-robin', baseLatencyMs: 2 },
+        data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 6000, baseLatencyMs: 2 },
       },
       {
         id: 'srv1', type: 'server', position: { x: 510, y: 80 },
@@ -60,7 +60,7 @@ export const TEMPLATES: Template[] = [
       },
       {
         id: 'db1', type: 'database', position: { x: 970, y: 200 },
-        data: { kind: 'database', label: 'PostgreSQL', dbType: 'postgres', maxReadQPS: 1000, maxWriteQPS: 300, readReplicas: 0, readRatio: 70, errorRate: 5, baseLatencyMs: 20 },
+        data: { kind: 'database', label: 'PostgreSQL', dbType: 'postgres', maxReadQPS: 1000, maxWriteQPS: 500, readReplicas: 0, readRatio: 70, errorRate: 5, baseLatencyMs: 20 },
       },
     ],
     edges: [
@@ -82,7 +82,7 @@ export const TEMPLATES: Template[] = [
       },
       {
         id: 'lb1', type: 'loadBalancer', position: { x: 280, y: 270 },
-        data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 4000, strategy: 'round-robin', baseLatencyMs: 2 },
+        data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 4000, baseLatencyMs: 2 },
       },
       {
         id: 'auth1', type: 'server', position: { x: 510, y: 120 },
@@ -119,7 +119,7 @@ export const TEMPLATES: Template[] = [
       },
       {
         id: 'lb1', type: 'loadBalancer', position: { x: 280, y: 300 },
-        data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 12000, strategy: 'round-robin', baseLatencyMs: 2 },
+        data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 12000, baseLatencyMs: 2 },
       },
       {
         id: 'api', type: 'server', position: { x: 510, y: 300 },
@@ -160,7 +160,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     name: 'Retry Storm',
-    description: 'A struggling DB + aggressive retries = cascading overload. Observe retry amplification in action.',
+    description: 'A DB at 92% + 3 retries on 15% errors: the retry loop settles at 1.9× load and takes the DB to 178%. Set retries to 0 to compare.',
     nodes: [
       {
         id: 'lg1', type: 'loadGenerator', position: { x: 50, y: 250 },
@@ -168,26 +168,28 @@ export const TEMPLATES: Template[] = [
       },
       {
         id: 'lb1', type: 'loadBalancer', position: { x: 280, y: 250 },
-        data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 6000, strategy: 'round-robin', baseLatencyMs: 2 },
+        data: { kind: 'loadBalancer', label: 'Load Balancer', maxQPS: 6000, baseLatencyMs: 2 },
       },
       {
         id: 'srv1', type: 'server', position: { x: 510, y: 120 },
-        data: { kind: 'server', label: 'API Server 1', maxQPS: 2500, instances: 1, errorRate: 2, baseLatencyMs: 45 },
+        data: { kind: 'server', label: 'API Server 1', maxQPS: 3000, instances: 1, errorRate: 2, baseLatencyMs: 45 },
       },
       {
         id: 'srv2', type: 'server', position: { x: 510, y: 380 },
-        data: { kind: 'server', label: 'API Server 2', maxQPS: 2500, instances: 1, errorRate: 2, baseLatencyMs: 45 },
+        data: { kind: 'server', label: 'API Server 2', maxQPS: 3000, instances: 1, errorRate: 2, baseLatencyMs: 45 },
       },
       {
         id: 'db1', type: 'database', position: { x: 780, y: 250 },
-        data: { kind: 'database', label: 'Primary DB', dbType: 'postgres', maxReadQPS: 3000, maxWriteQPS: 1000, readReplicas: 0, readRatio: 70, errorRate: 15, baseLatencyMs: 20 },
+        data: { kind: 'database', label: 'Primary DB', dbType: 'postgres', maxReadQPS: 5000, maxWriteQPS: 1600, readReplicas: 0, readRatio: 70, errorRate: 15, baseLatencyMs: 20 },
       },
     ],
     edges: [
       { id: 'e1', source: 'lg1',  target: 'lb1',  ...edgeBase },
       { id: 'e2', source: 'lb1',  target: 'srv1', ...edgeBase },
       { id: 'e3', source: 'lb1',  target: 'srv2', ...edgeBase },
-      // retryCount:3 on a DB with 15% error rate → amplifies QPS by 1 + (0.15 × 3) = 1.45×
+      // retryCount 3: each request costs 1 + e + e² + e³ attempts, e = the DB's total error rate.
+      // At the configured 15% that is 1.18× (5,762 QPS, 108%); overload raises e, and the
+      // solver settles at ~9,500 QPS (1.94× the 4,900 base, 178%). Asserted in lessons.test.ts.
       { id: 'e4', source: 'srv1', target: 'db1',  ...edgeBase, data: { distributionMode: 'auto' as const, retryCount: 3 } },
       { id: 'e5', source: 'srv2', target: 'db1',  ...edgeBase, data: { distributionMode: 'auto' as const, retryCount: 3 } },
     ],

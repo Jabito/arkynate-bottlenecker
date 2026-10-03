@@ -13,21 +13,31 @@ export interface LoadGeneratorData extends Record<string, unknown> {
   kind: 'loadGenerator';
   label: string;
   outputQPS: number;
+  // engine output (COMPUTED_NODE_KEYS)
   actualQPS?: number;
+  /** Always undefined: a source has no capacity, so no status. */
   status?: NodeStatus;
+  forwardedQPS?: number;
+  unallocatedQPS?: number;
 }
 
 export interface LoadBalancerData extends Record<string, unknown> {
   kind: 'loadBalancer';
   label: string;
   maxQPS: number;
-  strategy: 'round-robin' | 'weighted' | 'least-conn';
+  /** Legacy (pre-2026-10): kept so old saves load; the engine ignores it. Weight with per-edge percent instead. */
+  strategy?: 'round-robin' | 'weighted' | 'least-conn';
   errorRate?: number;
   baseLatencyMs?: number;
+  // engine output (COMPUTED_NODE_KEYS)
   actualQPS?: number;
   status?: NodeStatus;
   errorRatePct?: number;
   estimatedLatencyMs?: number;
+  utilization?: number;
+  capacity?: number;
+  forwardedQPS?: number;
+  unallocatedQPS?: number;
 }
 
 export interface ServerData extends Record<string, unknown> {
@@ -37,10 +47,15 @@ export interface ServerData extends Record<string, unknown> {
   instances: number;
   errorRate?: number;
   baseLatencyMs?: number;
+  // engine output (COMPUTED_NODE_KEYS)
   actualQPS?: number;
   status?: NodeStatus;
   errorRatePct?: number;
   estimatedLatencyMs?: number;
+  utilization?: number;
+  capacity?: number;
+  forwardedQPS?: number;
+  unallocatedQPS?: number;
 }
 
 export interface DatabaseData extends Record<string, unknown> {
@@ -50,13 +65,21 @@ export interface DatabaseData extends Record<string, unknown> {
   maxReadQPS: number;
   maxWriteQPS: number;
   readReplicas: number;
+  /** Share of incoming requests that are reads, 0-100. */
   readRatio: number;
   errorRate?: number;
   baseLatencyMs?: number;
+  // engine output (COMPUTED_NODE_KEYS)
   actualQPS?: number;
   status?: NodeStatus;
   errorRatePct?: number;
   estimatedLatencyMs?: number;
+  utilization?: number;
+  capacity?: number;
+  forwardedQPS?: number;
+  unallocatedQPS?: number;
+  readUtilization?: number;
+  writeUtilization?: number;
 }
 
 export interface CacheData extends Record<string, unknown> {
@@ -67,10 +90,15 @@ export interface CacheData extends Record<string, unknown> {
   maxQPS: number;
   errorRate?: number;
   baseLatencyMs?: number;
+  // engine output (COMPUTED_NODE_KEYS)
   actualQPS?: number;
   status?: NodeStatus;
   errorRatePct?: number;
   estimatedLatencyMs?: number;
+  utilization?: number;
+  capacity?: number;
+  forwardedQPS?: number;
+  unallocatedQPS?: number;
 }
 
 export interface QueueData extends Record<string, unknown> {
@@ -81,10 +109,16 @@ export interface QueueData extends Record<string, unknown> {
   consumers: number;
   errorRate?: number;
   baseLatencyMs?: number;
+  // engine output (COMPUTED_NODE_KEYS)
   actualQPS?: number;
   status?: NodeStatus;
   errorRatePct?: number;
   estimatedLatencyMs?: number;
+  utilization?: number;
+  capacity?: number;
+  forwardedQPS?: number;
+  unallocatedQPS?: number;
+  backlogQPS?: number;
 }
 
 export type NodeData =
@@ -105,8 +139,22 @@ export interface AnalysisResult {
   status: NodeStatus;
   errorQPS: number;
   errorRatePct: number;
+  /** M/M/1 mean latency at this node; Infinity when utilisation ≥ 100%. */
   estimatedLatencyMs: number;
+  /** Slowest synchronous path latency up to and including this node (0 off the request path). */
   cumulativeLatencyMs: number;
+  /** Requests actually served: min(incoming, capacity). */
+  servedQPS: number;
+  /** Successful output sent downstream (after errors, cache hits, queue drain). */
+  forwardedQPS: number;
+  /** Output not carried by any edge (percent/absolute edges leave a remainder and there is no auto edge). */
+  unallocatedQPS: number;
+  /** Queues only: backlog growth in msg/s (incoming − drain rate). */
+  backlogQPS: number;
+  /** Capacity ÷ incoming (Infinity when idle). */
+  headroom: number;
+  /** True when this node only sees traffic behind a queue (async, outside request latency). */
+  async: boolean;
 }
 
 export interface EdgeData extends Record<string, unknown> {
@@ -120,10 +168,11 @@ export interface EdgeData extends Record<string, unknown> {
 /** Node-data keys written by the engine. Stripped before save / export / share. Engine owns this list. */
 export const COMPUTED_NODE_KEYS = [
   'actualQPS', 'status', 'errorRatePct', 'estimatedLatencyMs', 'utilization', 'capacity',
+  'forwardedQPS', 'unallocatedQPS', 'backlogQPS', 'readUtilization', 'writeUtilization',
 ] as const;
 
 export interface AnalysisWarning {
-  kind: 'cycle' | 'unallocated' | 'overallocated' | 'invalid';
+  kind: 'cycle' | 'unallocated' | 'overallocated' | 'backlog' | 'convergence' | 'invalid';
   message: string;
   nodeId?: string;
   edgeId?: string;
@@ -138,6 +187,10 @@ export interface AnalysisMeta {
   endToEndLatencyMs: number | null;
   /** True when any traffic-carrying node is over capacity. */
   saturated: boolean;
-  /** Share of generated requests that complete successfully end to end (0-100). */
+  /** Share of generated requests that complete successfully end to end (0-100). Requests end at a queue once enqueued. */
   successRatePct: number;
+  /** Requests per second entering the system from load generators (allocated to edges). */
+  generatedQPS: number;
+  /** False when retries or a cycle did not settle within the round limit (a `convergence` warning is also emitted). */
+  converged: boolean;
 }
