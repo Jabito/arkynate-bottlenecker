@@ -2,12 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0a0f1e" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Bottlenecker — Find Architecture Bottlenecks Before They Hit Production</title>
     <meta name="description" content="Free visual tool for detecting system architecture bottlenecks. Model servers, databases, caches and queues, simulate load, and see exactly where performance bottlenecks occur — in your browser, no signup needed." />
     <meta name="keywords" content="architecture bottleneck, system bottleneck, performance bottleneck, how to find bottlenecks, avoid architecture bottlenecks, system design tool, load testing, distributed system simulator, bottleneck detection, system architecture" />
+    <!-- canonical and og:url are rewritten per route by the Navbar (#21) -->
     <link rel="canonical" href="https://bottlenecker.arkynate.com/" />
 
     <!-- Open Graph -->
@@ -28,10 +32,11 @@
     <meta name="twitter:image"       content="https://bottlenecker.arkynate.com/banner.png" />
 
     <!-- Google AdSense -->
-    <meta name="google-adsense-account" content="ca-pub-4792941984956312" />
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4792941984956312" crossorigin="anonymous"></script>
+    <!-- The publisher id is stamped at build time from VITE_ADSENSE_PUB_ID, defaulting to the production id (vite.config.ts) -->
+    <meta name="google-adsense-account" content="__ADSENSE_PUB_ID__" />
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=__ADSENSE_PUB_ID__" crossorigin="anonymous"></script>
 
-    <!-- JSON-LD: SoftwareApplication -->
+    <!-- JSON-LD: SoftwareApplication — version and date are stamped at build time (vite.config.ts) -->
     <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -42,9 +47,9 @@
   "url": "https://bottlenecker.arkynate.com/",
   "description": "Free browser-based tool for finding architecture bottlenecks and system bottlenecks. Model servers, databases, caches and queues, simulate load, and detect performance bottlenecks instantly.",
   "keywords": "architecture bottleneck, system bottleneck, performance bottleneck, bottleneck detection, load testing, system design",
-  "softwareVersion": "2.2.1",
+  "softwareVersion": "__APP_VERSION__",
   "screenshot": "https://bottlenecker.arkynate.com/banner.png",
-  "dateModified": "2026-03-16",
+  "dateModified": "__BUILD_DATE__",
   "featureList": "Visual architecture canvas, Load simulation, Bottleneck detection, Error rate modeling, Latency modeling, Retry amplification simulation",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "author": { "@type": "Organization", "name": "Arkynate Labs", "url": "https://arkynate.com/" }
@@ -70,7 +75,7 @@
       "name": "How do I find bottlenecks in my system architecture?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Use Bottlenecker: add your system components (servers, databases, caches, queues) to the canvas, connect them with edges, set their capacity limits and incoming QPS, then click Analyze. Overloaded nodes turn red instantly, showing exactly where your architecture bottleneck is before it reaches production."
+        "text": "Use Bottlenecker: add a load generator and your system components (servers, databases, caches, queues) to the canvas, connect them with edges, and set the incoming QPS and each component's capacity. The simulation re-runs on every change and overloaded nodes turn red, showing where your architecture bottleneck is before it reaches production."
       }
     },
     {
@@ -78,7 +83,7 @@
       "name": "How can I avoid architecture bottlenecks?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Common strategies to avoid architecture bottlenecks include: horizontal scaling (adding server instances), adding database read replicas, introducing a caching layer (Redis/CDN) to offload reads, and using message queues to buffer traffic spikes. Bottlenecker lets you simulate each mitigation visually before implementing it."
+        "text": "Common strategies to avoid architecture bottlenecks include: horizontal scaling (adding server instances), adding database read replicas, introducing a caching layer (Redis/CDN) to offload reads, and using message queues to buffer traffic spikes. In Bottlenecker you can try adding server instances, read replicas or a cache on the canvas and see how utilisation and error rates change before you build it."
       }
     },
     {
