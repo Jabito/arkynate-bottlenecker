@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdBanner, AD_SIZES } from '../components/AdBanner';
 
@@ -156,11 +155,6 @@ const SIM_FEATURES: SimFeature[] = [
 export default function ComponentsPage() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    document.title = 'System Components — Bottlenecker Architecture Bottleneck Simulator';
-    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    if (desc) desc.content = 'Reference for all system architecture components in Bottlenecker: servers, databases, caches, queues, load balancers, and edges. Understand how each node contributes to system bottlenecks.';
-  }, []);
 
   return (
     <div style={{ overflowY: 'auto', height: 'calc(100vh - 50px)', background: 'var(--bg-base)' }}>

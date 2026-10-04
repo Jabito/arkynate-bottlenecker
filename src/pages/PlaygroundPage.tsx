@@ -385,9 +385,6 @@ export default function PlaygroundPage() {
   const [isNarrow, setIsNarrow] = useState(() => window.innerWidth < MIN_WIDTH);
 
   useEffect(() => {
-    document.title = 'Playground — Simulate Architecture Bottlenecks | Bottlenecker';
-    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    if (desc) desc.content = 'Interactive canvas to simulate system architecture bottlenecks. Add components, set capacities, run load simulations, and identify performance bottlenecks in real time.';
     const handler = () => setIsNarrow(window.innerWidth < MIN_WIDTH);
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);

@@ -1,7 +1,8 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 
 const { version } = JSON.parse(readFileSync('./package.json', 'utf-8'))
 
@@ -55,10 +56,32 @@ function seoStamp(adsensePubId: string): Plugin {
   }
 }
 
+/**
+ * `vite preview` serves dist/<route>/index.html for /<route>, as production does: deploy.sh
+ * uploads each prerendered route to the extension-less S3 key (`lessons`). Without this,
+ * preview answers /lessons with the prerendered Home.
+ */
+function previewRouteFiles(): Plugin {
+  return {
+    name: 'bottlenecker-preview-routes',
+    configurePreviewServer(server) {
+      const outDir = path.resolve(server.config.root, server.config.build.outDir)
+      server.middlewares.use((req, _res, next) => {
+        const url = new URL(req.url ?? '/', 'http://preview')
+        if (url.pathname !== '/' && !url.pathname.endsWith('/')
+          && existsSync(path.join(outDir, url.pathname, 'index.html'))) {
+          req.url = `${url.pathname}/index.html${url.search}`
+        }
+        next()
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   return {
-    plugins: [react(), tailwindcss(), seoStamp(env.VITE_ADSENSE_PUB_ID || DEFAULT_ADSENSE_PUB_ID)],
+    plugins: [react(), tailwindcss(), seoStamp(env.VITE_ADSENSE_PUB_ID || DEFAULT_ADSENSE_PUB_ID), previewRouteFiles()],
     define: {
       __APP_VERSION__: JSON.stringify(version),
     },

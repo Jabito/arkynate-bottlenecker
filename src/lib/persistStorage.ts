@@ -25,7 +25,8 @@ if (typeof window !== 'undefined') {
 
 function getLocalStorage(): Storage | null {
   try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
+    // Checks window first: on the server (prerender) touching `localStorage` at all warns in Node 25+.
+    return typeof window === 'undefined' || typeof localStorage === 'undefined' ? null : localStorage;
   } catch {
     return null;
   }

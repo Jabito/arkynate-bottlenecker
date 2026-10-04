@@ -1,15 +1,10 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { trackEvent } from './lib/analytics';
-
-// Route-level code splitting: Home, Components and Lessons visitors don't download React Flow.
-const HomePage       = lazy(() => import('./pages/HomePage'));
-const ComponentsPage = lazy(() => import('./pages/ComponentsPage'));
-const LessonsPage    = lazy(() => import('./pages/LessonsPage'));
-const PlaygroundPage = lazy(() => import('./pages/PlaygroundPage'));
-const PrivacyPage    = lazy(() => import('./pages/PrivacyPage'));
+import { applyRouteHead } from './lib/routeMeta';
+import { Pages } from './routes';
 
 function RouteFallback() {
   return <div aria-busy="true" style={{ height: '100%', background: 'var(--bg-base)' }} />;
@@ -17,9 +12,6 @@ function RouteFallback() {
 
 /** Real "not found" page instead of a silent redirect home (soft 404s). React 19 hoists the meta to <head>. */
 function NotFound() {
-  useEffect(() => {
-    document.title = 'Page not found | Bottlenecker';
-  }, []);
   return (
     <div style={{
       height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -39,11 +31,21 @@ function NotFound() {
   );
 }
 
-export default function App() {
+interface AppProps {
+  /** Prerender only: render /playground as its loading fallback, so React Flow never runs on the server. */
+  playgroundShell?: boolean;
+}
+
+export default function App({ playgroundShell = false }: AppProps) {
   const location = useLocation();
 
   useEffect(() => {
     trackEvent('page_view');
+  }, [location.pathname]);
+
+  // Title, description, canonical, og and twitter tags (#21). The prerender bakes in the same values.
+  useEffect(() => {
+    applyRouteHead(location.pathname);
   }, [location.pathname]);
 
   return (
@@ -59,11 +61,11 @@ export default function App() {
         <ErrorBoundary key={location.pathname}>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
-              <Route path="/"           element={<HomePage />} />
-              <Route path="/components" element={<ComponentsPage />} />
-              <Route path="/lessons"    element={<LessonsPage />} />
-              <Route path="/playground" element={<PlaygroundPage />} />
-              <Route path="/privacy"    element={<PrivacyPage />} />
+              <Route path="/"           element={<Pages.Home />} />
+              <Route path="/components" element={<Pages.Components />} />
+              <Route path="/lessons"    element={<Pages.Lessons />} />
+              <Route path="/playground" element={playgroundShell ? <RouteFallback /> : <Pages.Playground />} />
+              <Route path="/privacy"    element={<Pages.Privacy />} />
               <Route path="*"           element={<NotFound />} />
             </Routes>
           </Suspense>

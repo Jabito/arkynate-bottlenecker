@@ -31,9 +31,9 @@ function restHeaders(): Record<string, string> {
   };
 }
 
-/** Global Privacy Control or Do Not Track set: send nothing. */
+/** Global Privacy Control or Do Not Track set, or not in a browser (the prerender): send nothing. */
 function optedOut(): boolean {
-  if (typeof navigator === 'undefined') return true;
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return true;
   const nav = navigator as Navigator & { globalPrivacyControl?: boolean };
   return nav.globalPrivacyControl === true || nav.doNotTrack === '1';
 }
@@ -99,7 +99,7 @@ async function fetchCount(eventType: AnalyticsEvent): Promise<number> {
  * don't each run a count query. Returns 0 on any error.
  */
 export async function getEventCount(eventType: AnalyticsEvent): Promise<number> {
-  if (!CONFIGURED) return 0;
+  if (!CONFIGURED || typeof window === 'undefined') return 0;
   const key = `bn-count:${eventType}`;
   const cached = readCachedCount(key);
   if (cached !== null) return cached;

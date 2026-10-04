@@ -209,11 +209,6 @@ export default function LessonsPage() {
     card.focus({ preventScroll: true });
   }, [hash]);
 
-  useEffect(() => {
-    document.title = 'Architecture Bottleneck Lessons — Learn to Avoid System Bottlenecks | Bottlenecker';
-    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    if (desc) desc.content = 'Lessons on common system architecture bottlenecks: database overload, cache misses, queue saturation, and more. Learn how to identify and avoid bottlenecks with real diagrams.';
-  }, []);
 
   return (
     <div style={{

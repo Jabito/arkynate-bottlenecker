@@ -6,7 +6,6 @@ import { applyTheme, useThemeStore } from '../store/themeStore';
 import { TEMPLATES } from '../data/templates';
 import { ThemePicker } from './ThemePicker';
 
-const SITE = 'https://bottlenecker.arkynate.com';
 const SUPPORT_URL = 'https://www.paypal.com/paypalme/kingJabito';
 const ISSUES_URL = 'https://github.com/Jabito/arkynate-bottlenecker/issues';
 const ABOUT_URL = 'https://arkynate.com/';
@@ -20,13 +19,14 @@ const MQ_PHONE = '(max-width: 639px)';
 
 type MenuId = 'templates' | 'save' | 'load' | 'export' | 'more';
 
+/** False on the server and while hydrating, so the prerendered bar is the desktop one. */
 function useMediaQuery(query: string): boolean {
   const subscribe = useCallback((onChange: () => void) => {
     const mql = window.matchMedia(query);
     mql.addEventListener('change', onChange);
     return () => mql.removeEventListener('change', onChange);
   }, [query]);
-  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches);
+  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches, () => false);
 }
 
 const navLinkStyle = ({ isActive }: { isActive: boolean }): React.CSSProperties => ({
@@ -197,14 +197,6 @@ export function Navbar() {
   useEffect(() => {
     applyTheme(isPlayground ? theme : 'dark');
   }, [isPlayground, theme]);
-
-  // Per-route canonical + og:url (#21).
-  useEffect(() => {
-    const path = location.pathname.replace(/\/+$/, '') || '/';
-    const url = SITE + path; // unknown paths render a noindex 404, not a duplicate of Home
-    document.querySelector('link[rel="canonical"]')?.setAttribute('href', url);
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
-  }, [location.pathname]);
 
   // Close menus and pending confirms on navigation.
   const [prevPath, setPrevPath] = useState(location.pathname);

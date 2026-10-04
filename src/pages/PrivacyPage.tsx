@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const UPDATED = '2026-10-03';
@@ -29,11 +28,6 @@ function Ext({ href, children }: { href: string; children: React.ReactNode }) {
 }
 
 export default function PrivacyPage() {
-  useEffect(() => {
-    document.title = 'Privacy — Bottlenecker';
-    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    if (desc) desc.content = 'What Bottlenecker collects: anonymous usage counts and Google AdSense cookies. Your diagrams stay in your browser.';
-  }, []);
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', background: 'var(--bg-base)', color: 'var(--text)' }}>

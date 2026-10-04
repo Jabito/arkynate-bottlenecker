@@ -7,13 +7,14 @@ import { STATUS_THRESHOLDS } from '../engine/format';
 // Same threshold as the playground's "Desktop Required" screen.
 const MQ_PHONE = '(max-width: 767px)';
 
+/** The prerender (and hydration) use the desktop layout; phones switch right after hydrating. */
 function useIsPhone(): boolean {
   const subscribe = useCallback((onChange: () => void) => {
     const mql = window.matchMedia(MQ_PHONE);
     mql.addEventListener('change', onChange);
     return () => mql.removeEventListener('change', onChange);
   }, []);
-  return useSyncExternalStore(subscribe, () => window.matchMedia(MQ_PHONE).matches);
+  return useSyncExternalStore(subscribe, () => window.matchMedia(MQ_PHONE).matches, () => false);
 }
 
 const STEPS = [
@@ -101,11 +102,6 @@ export default function HomePage() {
     getEventCount('analyze_click').then(setAnalyzeCount);
   }, []);
 
-  useEffect(() => {
-    document.title = 'Bottlenecker — Find Architecture Bottlenecks Before They Hit Production';
-    const desc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    if (desc) desc.content = 'Free visual tool for detecting system architecture bottlenecks. Model servers, databases, caches and queues, simulate load, and see exactly where performance bottlenecks occur — in your browser, no signup needed.';
-  }, []);
 
   return (
     <div style={{ overflowY: 'auto', height: '100%', background: 'var(--bg-base)', color: 'var(--text)' }}>
