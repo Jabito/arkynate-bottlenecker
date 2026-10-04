@@ -34,20 +34,46 @@ aws s3api list-objects-v2 --bucket "$S3_BUCKET" --prefix assets/ \
       aws s3 rm "s3://$S3_BUCKET/$key" --region "$REGION"
     done
 
+# Prerendered routes (scripts/prerender.mjs): dist/<route>/index.html. The S3 REST
+# origin looks up /lessons as the key `lessons`, never `lessons/index.html`, so each
+# route is uploaded to its extension-less key below.
+ROUTES=()
+for f in dist/*/index.html; do
+  [[ -e "$f" ]] || continue
+  route="${f#dist/}"
+  ROUTES+=("${route%/index.html}")
+done
+[[ ${#ROUTES[@]} -gt 0 ]] || { echo "No prerendered routes in dist/ — run npm run build" >&2; exit 1; }
+
 # Root files (favicon, robots.txt, sitemap.xml, llms.txt, ...): short TTL so
-# they can be refreshed. --delete never touches the excluded paths.
+# they can be refreshed. --delete never touches the excluded paths, which keeps
+# the route keys from being deleted (they have no same-named file in dist/).
 echo "Uploading root files..."
+ROUTE_EXCLUDES=()
+for route in "${ROUTES[@]}"; do ROUTE_EXCLUDES+=(--exclude "$route" --exclude "$route/*"); done
 aws s3 sync dist/ "s3://$S3_BUCKET/" \
   --delete \
   --region "$REGION" \
   --exclude "assets/*" \
   --exclude "index.html" \
+  "${ROUTE_EXCLUDES[@]}" \
   --cache-control "public, max-age=3600"
 
-# index.html last, so it never points at bundles that aren't uploaded yet.
+# HTML last, so it never points at bundles that aren't uploaded yet. No caching:
+# a deploy must reach visitors (and AdSense's crawler) at once.
+for route in "${ROUTES[@]}"; do
+  echo "Uploading /$route..."
+  aws s3 cp "dist/$route/index.html" "s3://$S3_BUCKET/$route" \
+    --region "$REGION" \
+    --content-type "text/html; charset=utf-8" \
+    --cache-control "no-cache, no-store, must-revalidate"
+done
+
+# Home last: it is also CloudFront's answer for unknown paths (403/404 → /index.html).
 echo "Uploading index.html..."
 aws s3 cp dist/index.html "s3://$S3_BUCKET/index.html" \
   --region "$REGION" \
+  --content-type "text/html; charset=utf-8" \
   --cache-control "no-cache, no-store, must-revalidate"
 
 echo "Invalidating CloudFront cache..."

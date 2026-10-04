@@ -9,7 +9,7 @@ React 19 + Vite + TypeScript SPA — interactive architecture load simulator. `@
 ```bash
 npm install
 npm run dev        # localhost:5173
-npm run build      # tsc -b + vite build → dist/
+npm run build      # tsc -b + vite build + SSR build + scripts/prerender.mjs → dist/
 npm run lint       # eslint
 npm run typecheck  # tsc -b
 npm test           # vitest run
@@ -24,6 +24,9 @@ npm test           # vitest run
 | `src/lib/` | Analytics, share-link codec (URL `#fragment`), diagram validation, image export |
 | `src/nodes/`, `src/components/` | Node cards, palette, config panel, analysis bar, navbar |
 | `src/pages/` | Home, Components, Lessons, Playground, Privacy |
+| `src/routes.ts` | Lazy pages + `preloadRoute` (renders a page without suspending) |
+| `src/lib/routeMeta.ts` | Per-route title/description/canonical/og/twitter: one source for prerender and client |
+| `src/entry-server.tsx`, `scripts/prerender.mjs` | Build-time prerender (see Prerendering) |
 | `src/data/` | Templates, lessons, node defaults |
 | `src/index.css` | Theme tokens (`--bg-*`, `--text-*`, `--st-*`, `--edge-*`) for Dark / `body.theme-light` / `body.theme-matrix` |
 
@@ -33,6 +36,13 @@ npm test           # vitest run
 - Read the store with selectors (`useDiagramStore(s => s.x)` or `useShallow`), never the whole store.
 - Engine-computed node fields are listed in `COMPUTED_NODE_KEYS` (`src/types`) and stripped on save/export/share.
 - Wrap anything that calls `useReactFlow()` in `ReactFlowProvider` (PlaygroundPage does).
+
+## Prerendering
+
+`npm run build` renders `/`, `/components`, `/lessons`, `/privacy` to full HTML (`dist/index.html`, `dist/<route>/index.html`) with `react-dom/server`; `/playground` gets a shell (navbar + head; React Flow never runs on the server). `<body data-prerendered>` names the route; `main.tsx` hydrates when it matches the address, else renders fresh (an inline script in `index.html` drops another route's markup before first paint, so a 404 never flashes Home). Rules for anything that renders on a content page:
+- No `window`/`document`/storage access during render or at module scope; browser-only work goes in effects. `useSyncExternalStore` needs a server snapshot (`() => false` = desktop).
+- Server and first client render must match (hydration): no `Date.now()`, random or persisted-store values in content-page markup.
+- New route: add it to `ROUTE_META`, `src/routes.ts` and `PRERENDER_ROUTES`; `src/prerender.test.ts` checks h1/title/canonical.
 
 ## Ads (Google AdSense)
 
@@ -50,9 +60,11 @@ npm test           # vitest run
 
 S3 + CloudFront via GitHub Actions: `ci.yml` (lint, typecheck, test, build) gates `deploy.yml`, which runs `deploy.sh --skip-build`. Manual: `S3_BUCKET=… CF_DISTRIBUTION_ID=… ./deploy.sh`. Never deploy from an agent session.
 
+The origin is the S3 REST endpoint, so `/lessons` is the key `lessons`: `deploy.sh` uploads each `dist/<route>/index.html` to its extension-less key (`text/html`, no-cache), then `index.html`, which CloudFront also serves for unknown paths (403/404 → `/index.html`). `npm run preview` mimics this.
+
 ## SEO
 
-`softwareVersion`/`dateModified` in `index.html` JSON-LD and `sitemap.xml` `lastmod` are stamped at build time by the plugin in `vite.config.ts` — bump `package.json` version per release; no manual date edits. The Navbar sets per-route canonical/og:url. `public/banner.png` is the og/twitter image.
+`softwareVersion`/`dateModified` in `index.html` JSON-LD and `sitemap.xml` `lastmod` are stamped at build time by the plugin in `vite.config.ts` — bump `package.json` version per release; no manual date edits. Per-route head tags come from `src/lib/routeMeta.ts` (baked in by the prerender, updated on navigation by `App`). `public/banner.png` is the og/twitter image.
 
 ## Known Errors & Fixes
 
