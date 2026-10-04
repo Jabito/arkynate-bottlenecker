@@ -104,7 +104,7 @@ export default function HomePage() {
 
 
   return (
-    <div style={{ overflowY: 'auto', height: '100%', background: 'var(--bg-base)', color: 'var(--text)' }}>
+    <div style={{ background: 'var(--bg-base)', color: 'var(--text)' }}>
 
       {/* Hero */}
       <section style={{

@@ -30,7 +30,7 @@ function Ext({ href, children }: { href: string; children: React.ReactNode }) {
 export default function PrivacyPage() {
 
   return (
-    <div style={{ height: '100%', overflowY: 'auto', background: 'var(--bg-base)', color: 'var(--text)' }}>
+    <div style={{ minHeight: 'calc(100vh - 50px)', background: 'var(--bg-base)', color: 'var(--text)' }}>
       <main style={{ maxWidth: 720, margin: '0 auto', padding: 'clamp(32px, 6vw, 64px) clamp(16px, 5vw, 32px) 64px' }}>
         <h1 style={{
           fontFamily: "'Space Grotesk', sans-serif",

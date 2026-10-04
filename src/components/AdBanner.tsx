@@ -37,47 +37,82 @@ interface AdBannerProps {
 /**
  * A fixed-size AdSense slot that takes no space until Google reports it filled (ruling 5).
  *
- * While unfilled the wrapper collapses to zero HEIGHT but keeps its width. Never use
- * display:none here: AdSense measures the slot's available width before requesting an ad,
- * and a hidden slot (width 0) is never requested at all (live slots sat unrequested from
- * 2026-03-17 to 2026-10-03 for this reason).
+ * While pending, unfilled or blocked (script never loaded, e.g. an ad blocker) the wrapper
+ * collapses to zero HEIGHT but keeps its width. Never hide a slot with display:none: AdSense
+ * measures width 0 and never requests an ad (no ads served 2026-03-17 → 2026-10-03). A
+ * zero-height slot inside the viewport is still requested immediately (verified on live).
+ *
+ * The slot is pushed to AdSense only when it comes within 200 px of the viewport, so off-screen
+ * slots never depend on AdSense's own deferred loading.
  */
 export function AdBanner({ slot, size, style, onFilledChange }: AdBannerProps) {
   const initialized = useRef(false);
   const insRef = useRef<HTMLModElement>(null);
-  const [filled, setFilled] = useState(false);
+  const [status, setStatus] = useState<'pending' | 'filled' | 'unfilled' | 'blocked'>('pending');
 
   useEffect(() => {
     const ins = insRef.current;
     if (!ins) return;
 
     const observer = new MutationObserver(() => {
-      const isFilled = ins.getAttribute('data-ad-status') === 'filled';
-      setFilled(isFilled);
-      onFilledChange?.(isFilled);
+      const adStatus = ins.getAttribute('data-ad-status');
+      if (adStatus !== 'filled' && adStatus !== 'unfilled') return;
+      setStatus(adStatus);
+      onFilledChange?.(adStatus === 'filled');
     });
     observer.observe(ins, { attributes: true, attributeFilter: ['data-ad-status'] });
     return () => observer.disconnect();
   }, [onFilledChange]);
 
+  // Hand the slot to AdSense only once it is about to be visible (zero-area targets still report
+  // isIntersecting when inside the root, so the collapsed wrapper works as the target).
   useEffect(() => {
     if (initialized.current) return;
-    initialized.current = true;
-    try {
-      (window.adsbygoogle ||= []).push({});
-    } catch {
-      // ad blocker or script not loaded — the slot simply stays collapsed
+    const wrapper = insRef.current?.parentElement;
+    if (!wrapper) return;
+    let timer: number | undefined;
+
+    const activate = () => {
+      if (initialized.current) return;
+      initialized.current = true;
+      try {
+        (window.adsbygoogle ||= []).push({});
+      } catch {
+        setStatus('blocked');
+        return;
+      }
+      // adsbygoogle.js sets `loaded` once it runs; if it never does, the script was blocked.
+      timer = window.setTimeout(() => {
+        if (!(window.adsbygoogle as { loaded?: boolean } | undefined)?.loaded) {
+          setStatus(s => (s === 'pending' ? 'blocked' : s));
+        }
+      }, 3000);
+    };
+
+    if (typeof IntersectionObserver === 'undefined') {
+      activate();
+      return () => window.clearTimeout(timer);
     }
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) {
+        io.disconnect();
+        activate();
+      }
+    }, { rootMargin: '200px 0px' });
+    io.observe(wrapper);
+    return () => {
+      io.disconnect();
+      window.clearTimeout(timer);
+    };
   }, []);
 
+  const wrapperStyle: React.CSSProperties =
+    status === 'filled' ? { textAlign: 'center', ...style }
+    : { height: 0, overflow: 'hidden', textAlign: 'center' };
+
   return (
-    <div
-      data-ad-wrapper={slot}
-      style={filled
-        ? { textAlign: 'center', ...style }
-        : { height: 0, overflow: 'hidden', textAlign: 'center' }}
-    >
-      {filled && <div className="bn-ad-label">Advertisement</div>}
+    <div data-ad-wrapper={slot} data-ad-state={status} style={wrapperStyle}>
+      {status === 'filled' && <div className="bn-ad-label">Advertisement</div>}
       <ins
         ref={insRef}
         className="adsbygoogle"

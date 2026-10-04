@@ -157,7 +157,7 @@ export default function ComponentsPage() {
 
 
   return (
-    <div style={{ overflowY: 'auto', height: 'calc(100vh - 50px)', background: 'var(--bg-base)' }}>
+    <div style={{ background: 'var(--bg-base)' }}>
 
       {/* Ad */}
       <AdBanner

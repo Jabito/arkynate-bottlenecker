@@ -8,7 +8,9 @@ import { lessonHref } from '../lib/deepLinks';
 const GRID_MAX = 1680;
 const GUTTER = 'clamp(16px, 4vw, 32px)';
 /** Clears the sticky header when a `/lessons#<id>` link scrolls a card into view. */
-const HEADER_CLEARANCE = 96;
+/** The site navbar is sticky above this page's own sticky header. */
+const NAV_HEIGHT = 50;
+const HEADER_CLEARANCE = NAV_HEIGHT + 96;
 
 function Badge({ label, color }: { label: string; color: string }) {
   return (
@@ -212,8 +214,6 @@ export default function LessonsPage() {
 
   return (
     <div style={{
-      height: '100%',
-      overflowY: 'auto',
       background: 'var(--bg-nav)',
       color: 'var(--text)',
       fontFamily: "'Space Grotesk', sans-serif",
@@ -221,7 +221,7 @@ export default function LessonsPage() {
       {/* Sticky header */}
       <div style={{
         position: 'sticky',
-        top: 0,
+        top: NAV_HEIGHT,
         zIndex: 10,
         background: 'var(--bg-nav)',
         borderBottom: '1px solid var(--border)',

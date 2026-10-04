@@ -33,3 +33,12 @@ Context: the site was resubmitted for AdSense review on 2026-10-03. This audit l
 - arkynate.com loads no ad script, so its "no tracking" privacy statement stays true. The verification meta tag sets no cookies.
 - Subdomain vs separate domain: AdSense approves the root domain (`arkynate.com`), and that covers `bottlenecker.arkynate.com`. No separate domain needed.
 - The 2026-09-21 → 2026-10-01 certificate outage would have failed any review in that window. It is fixed, and ACM validation records now keep renewals automatic.
+
+## Status after the fixes (2026-10-05 PHT)
+
+- B1 done (prerender, 2.3.2): live raw HTML is now Home 305, Lessons 1,681, Components 1,069, Privacy 490 words, each with its own title and canonical.
+- B2–B5 done (2.3.2): playground ads paused (`PLAYGROUND_ADS_ENABLED`), ads labelled with spacing, privacy opt-out links, About/Contact links.
+- B6 done (owner, Cloudflare Always Use HTTPS): `http://www.arkynate.com` → `https://arkynate.com` (200).
+- Found during verification (2.3.3): content pages scrolled inside their own container rather than the window, and slots were pushed while off-screen. Content pages now scroll the window, and slots are pushed only near the viewport. Verified in headless Chrome (visible): both Home slots are requested on scroll; Lessons and Components are requested at load.
+- B7 open (owner-actions §3, CloudFront 404 function). Not a blocker.
+- `arkynate.com/about` returns 404 for a direct load (client-only redirect to `/operator` in arkynate-labs-web). Unlinked; low priority.
