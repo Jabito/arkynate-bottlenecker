@@ -10,6 +10,13 @@ declare global {
 const ADSENSE_CLIENT: string =
   import.meta.env.VITE_ADSENSE_PUB_ID || 'ca-pub-4792941984956312';
 
+/**
+ * Ads on /playground (palette, config panel, under the canvas) are off while AdSense reviews the
+ * site: a tool screen with little text and several ads risks "ads on screens without publisher
+ * content". Set to true once arkynate.com is approved — see CLAUDE.md "Ads".
+ */
+export const PLAYGROUND_ADS_ENABLED = false;
+
 /** Standard AdSense display sizes used on the site. */
 export const AD_SIZES = {
   mediumRectangle: { width: 300, height: 250 },
@@ -70,6 +77,7 @@ export function AdBanner({ slot, size, style, onFilledChange }: AdBannerProps) {
         ? { textAlign: 'center', ...style }
         : { height: 0, overflow: 'hidden', textAlign: 'center' }}
     >
+      {filled && <div className="bn-ad-label">Advertisement</div>}
       <ins
         ref={insRef}
         className="adsbygoogle"

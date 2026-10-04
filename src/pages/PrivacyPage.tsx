@@ -109,8 +109,16 @@ export default function PrivacyPage() {
             covers what is collected.
           </p>
           <p style={pStyle}>
-            You can turn off personalised ads in <Ext href="https://myadcenter.google.com/">Google My Ad Center</Ext>,
-            or block third-party cookies or ads in your browser. Bottlenecker works fully with ads blocked.
+            Third-party vendors, including Google, use cookies to serve ads based on your prior visits to
+            this website or other websites. Google’s use of advertising cookies enables it and its partners
+            to serve ads to you based on your visits to this site and/or other sites on the Internet.
+          </p>
+          <p style={pStyle}>
+            You can opt out of personalised advertising in Google’s{' '}
+            <Ext href="https://adssettings.google.com/">Ads Settings</Ext>, and opt out of other
+            third-party vendors’ use of cookies for personalised advertising at{' '}
+            <Ext href="https://www.aboutads.info/choices/">aboutads.info</Ext>. You can also block
+            third-party cookies or ads in your browser. Bottlenecker works fully with ads blocked.
           </p>
         </section>
 

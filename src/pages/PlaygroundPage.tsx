@@ -31,7 +31,7 @@ import { QueueNode } from '../nodes/QueueNode';
 import { ComponentPalette } from '../components/ComponentPalette';
 import { ConfigPanel } from '../components/ConfigPanel';
 import { AnalysisBar } from '../components/AnalysisBar';
-import { AdBanner, AD_SIZES } from '../components/AdBanner';
+import { AdBanner, AD_SIZES, PLAYGROUND_ADS_ENABLED } from '../components/AdBanner';
 
 // Lesson data loads only once a lesson is open (#100).
 const LessonPanel = lazy(() => import('../components/LessonPanel'));
@@ -367,12 +367,14 @@ function Workspace() {
           <ConfigPanel />
         </div>
         {/* Fixed-height slot: the canvas never resizes when the ad fills. */}
+        {PLAYGROUND_ADS_ENABLED && (<>
         {/* Takes space only once an ad is served (ruling 5); unfilled, the canvas keeps the room (#74) */}
         <div style={bottomAdFilled
-          ? { height: 90, flexShrink: 0, overflow: 'hidden', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)' }
+          ? { height: 116, flexShrink: 0, overflow: 'hidden', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)' }
           : { flexShrink: 0 }}>
-          <AdBanner slot="1205058699" size={AD_SIZES.leaderboard} style={{ height: 90 }} onFilledChange={setBottomAdFilled} />
+          <AdBanner slot="1205058699" size={AD_SIZES.leaderboard} onFilledChange={setBottomAdFilled} />
         </div>
+        </>)}
         <AnalysisBar />
       </div>
     </ReactFlowProvider>

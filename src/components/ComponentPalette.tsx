@@ -3,7 +3,7 @@ import { useReactFlow, type Node } from '@xyflow/react';
 import type { NodeKind, NodeData } from '../types';
 import { NODE_DEFAULTS } from '../data/nodeDefaults';
 import { useDiagramStore } from '../store/diagramStore';
-import { AdBanner, AD_SIZES } from './AdBanner';
+import { AdBanner, AD_SIZES, PLAYGROUND_ADS_ENABLED } from './AdBanner';
 
 interface PaletteItem {
   kind: NodeKind;
@@ -121,11 +121,11 @@ export function ComponentPalette() {
       <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', fontSize: 10, color: 'var(--text-dim)', lineHeight: 1.5 }}>
         Click to add · Drag onto canvas · Delete to remove
       </div>
-      <AdBanner
+      {PLAYGROUND_ADS_ENABLED && <AdBanner
         slot="6844543977"
         size={AD_SIZES.smallSquare}
-        style={{ width: '100%', padding: '4px 0', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)', marginTop: 8 }}
-      />
+        style={{ width: '100%', padding: '4px 0', background: 'var(--bg-nav)', borderTop: '1px solid var(--border)', marginTop: 16 }}
+      />}
     </aside>
   );
 }

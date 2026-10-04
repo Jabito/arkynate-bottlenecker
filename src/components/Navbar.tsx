@@ -9,6 +9,8 @@ import { ThemePicker } from './ThemePicker';
 const SITE = 'https://bottlenecker.arkynate.com';
 const SUPPORT_URL = 'https://www.paypal.com/paypalme/kingJabito';
 const ISSUES_URL = 'https://github.com/Jabito/arkynate-bottlenecker/issues';
+const ABOUT_URL = 'https://arkynate.com/';
+const CONTACT_URL = 'https://arkynate.com/contact';
 
 // Same threshold as PlaygroundPage's "Desktop Required" screen (innerWidth < 768).
 const MQ_DESKTOP_REQUIRED = '(max-width: 767px)';
@@ -521,6 +523,12 @@ export function Navbar() {
             </>
           )}
           <Link to="/privacy" role="menuitem" className="bn-menuitem" onClick={closeMenu}>Privacy</Link>
+          <a href={ABOUT_URL} target="_blank" rel="noopener noreferrer" role="menuitem" className="bn-menuitem" onClick={closeMenu}>
+            About Arkynate Labs ↗
+          </a>
+          <a href={CONTACT_URL} target="_blank" rel="noopener noreferrer" role="menuitem" className="bn-menuitem" onClick={closeMenu}>
+            Contact ↗
+          </a>
           <a href={ISSUES_URL} target="_blank" rel="noopener noreferrer" role="menuitem" className="bn-menuitem" onClick={closeMenu}>
             Report an issue ↗
           </a>

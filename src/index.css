@@ -507,3 +507,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .bn-spinner { animation-duration: 2.4s; }
 }
+
+/* AdSense label: identifies the slot and keeps it visually apart from controls (policy) */
+.bn-ad-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 6px 0 4px;
+}

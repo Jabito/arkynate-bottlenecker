@@ -386,6 +386,12 @@ export default function HomePage() {
           <Link to="/lessons" className="bn-link">Lessons</Link>
           <Link to="/playground" className="bn-link">Playground</Link>
           <Link to="/privacy" className="bn-link">Privacy</Link>
+          <a href="https://arkynate.com/" target="_blank" rel="noopener noreferrer" className="bn-link">
+            About Arkynate Labs
+          </a>
+          <a href="https://arkynate.com/contact" target="_blank" rel="noopener noreferrer" className="bn-link">
+            Contact
+          </a>
           <a href="https://github.com/Jabito/arkynate-bottlenecker" target="_blank" rel="noopener noreferrer" className="bn-link">
             GitHub
           </a>
